@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>阿里国际站 · 团队协作云平台</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --brand:#ff6a00; --brand-dark:#e85d00; --ink:#1f2733; --muted:#6b7686;
+    --line:#e6e9ef; --bg:#f5f7fa; --card:#ffffff; --ok:#0a8f5b; --warn:#c47f00; --danger:#d33; 
+    --shadow:0 2px 12px rgba(20,30,50,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit;font-size:14px}
+  .hidden{display:none !important}
+
+  /* ---------- 登录/注册 ---------- */
+  #auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:linear-gradient(135deg,#ff8a3d 0%,#ff6a00 45%,#e85d00 100%);}
+  .auth-card{width:100%;max-width:400px;background:#fff;border-radius:16px;padding:32px;box-shadow:0 20px 60px rgba(0,0,0,.18)}
+  .auth-logo{font-size:22px;font-weight:800;text-align:center;color:var(--brand)}
+  .auth-sub{text-align:center;color:var(--muted);font-size:13px;margin:6px 0 22px}
+  .tabs{display:flex;background:var(--bg);border-radius:10px;padding:4px;margin-bottom:20px}
+  .tabs button{flex:1;border:0;background:transparent;padding:9px;border-radius:8px;font-weight:600;color:var(--muted)}
+  .tabs button.on{background:#fff;color:var(--brand);box-shadow:var(--shadow)}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+  .field input,.field select,.field textarea{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:9px;outline:none}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--brand)}
+  .btn-primary{width:100%;border:0;background:var(--brand);color:#fff;padding:12px;border-radius:10px;font-weight:700;font-size:15px}
+  .btn-primary:hover{background:var(--brand-dark)}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed}
+  .msg{font-size:13px;margin-top:12px;text-align:center;min-height:18px}
+  .msg.err{color:var(--danger)} .msg.ok{color:var(--ok)}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+
+  /* ---------- 应用外壳 ---------- */
+  #app{display:none;min-height:100vh}
+  .topbar{background:#fff;border-bottom:1px solid var(--line);padding:0 22px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:20}
+  .brand{font-weight:800;color:var(--brand);font-size:17px}
+  .brand small{color:var(--muted);font-weight:500;font-size:12px;margin-left:8px}
+  .userbox{display:flex;align-items:center;gap:12px;font-size:13px}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
+  .role-pill{font-size:11px;padding:2px 8px;border-radius:20px;background:#fff2e6;color:var(--brand);font-weight:600}
+  .btn-ghost{border:1px solid var(--line);background:#fff;padding:7px 12px;border-radius:8px;font-size:13px;color:var(--muted)}
+  .btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
+
+  .nav{display:flex;gap:4px;padding:12px 22px 0;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:58px;z-index:19;overflow-x:auto}
+  .nav button{border:0;background:transparent;padding:11px 16px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+  .nav button.on{color:var(--brand);border-bottom-color:var(--brand)}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:22px}
+  .section-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px}
+  .section-head h2{margin:0;font-size:20px}
+  .live-dot{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ok);font-weight:600}
+  .live-dot i{width:8px;height:8px;border-radius:50%;background:var(--ok);display:inline-block;animation:pulse 1.6s infinite}
+  @keyframes pulse{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .toolbar input,.toolbar select{padding:9px 11px;border:1px solid var(--line);border-radius:9px;outline:none}
+  .toolbar input:focus,.toolbar select:focus{border-color:var(--brand)}
+  .btn-add{border:0;background:var(--brand);color:#fff;padding:9px 16px;border-radius:9px;font-weight:700}
+  .btn-add:hover{background:var(--brand-dark)}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 6px;font-size:16px}
+  .card .meta{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .card .row{font-size:13px;margin:4px 0}
+  .card .row b{color:var(--muted);font-weight:600;display:inline-block;min-width:52px}
+  .badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600}
+  .badge.待跟进{background:#eef2ff;color:#4557c7}
+  .badge.跟进中{background:#fff2e6;color:var(--brand)}
+  .badge.已成交{background:#e6f7ef;color:var(--ok)}
+  .badge.已搁置{background:#f0f1f3;color:var(--muted)}
+  .tag{display:inline-block;font-size:11px;background:var(--bg);color:var(--muted);padding:2px 8px;border-radius:6px;margin:2px 4px 0 0}
+  .files{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+  .file-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:var(--bg);padding:5px 10px;border-radius:8px;margin:3px 4px 0 0;cursor:pointer;border:1px solid transparent}
+  .file-chip:hover{border-color:var(--brand);color:var(--brand)}
+  .card-actions{display:flex;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+  .card-actions button{border:1px solid var(--line);background:#fff;padding:6px 12px;border-radius:8px;font-size:12px;color:var(--muted)}
+  .card-actions button:hover{border-color:var(--brand);color:var(--brand)}
+  .card-actions button.del:hover{border-color:var(--danger);color:var(--danger)}
+  .empty{text-align:center;color:var(--muted);padding:50px 0;font-size:14px}
+
+  /* ---------- 弹窗 ---------- */
+  .modal-bg{position:fixed;inset:0;background:rgba(20,30,50,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .modal{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:90vh;overflow:auto;padding:24px}
+  .modal h3{margin:0 0 18px}
+  .modal .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal .field{margin-bottom:12px}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+  .modal-actions .btn-ghost{padding:10px 18px}
+  .modal-actions .btn-primary{width:auto;padding:10px 22px}
+  .dropzone{border:2px dashed var(--line);border-radius:10px;padding:16px;text-align:center;color:var(--muted);font-size:13px;cursor:pointer}
+  .dropzone:hover{border-color:var(--brand);color:var(--brand)}
+  .file-list-mini{margin-top:8px}
+  .file-list-mini div{font-size:12px;display:flex;justify-content:space-between;padding:4px 0}
+  .file-list-mini button{border:0;background:none;color:var(--danger);cursor:pointer}
+
+  /* ---------- 管理员总览 ---------- */
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  th,td{padding:11px 14px;text-align:left;font-size:13px;border-bottom:1px solid var(--line)}
+  th{background:var(--bg);font-weight:700;color:var(--muted)}
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+  .stat .num{font-size:28px;font-weight:800;color:var(--brand)}
+  .stat .lbl{font-size:13px;color:var(--muted);margin-top:4px}
+  .admin-block{margin-bottom:28px}
+  .admin-block h3{font-size:16px;margin:0 0 12px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+  .config-warn{background:#fff8e6;border:1px solid #ffe0a3;color:#8a6d1a;padding:14px 18px;border-radius:12px;margin:20px;font-size:13px;line-height:1.6}
+</style>
+</head>
+<body>
+
+<!-- ================= 配置区（部署时只改这里） ================= -->
+<script>
+  // ▼▼▼ 部署时把下面三项替换成你自己的值（见 部署指南.md） ▼▼▼
+  const SUPABASE_URL      = "https://myuezvqfqsprdtbhzvyg.supabase.co";   // Supabase 项目 URL
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15dWV6dnFmcXNwcmR0Ymh6dnlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMTY1MDksImV4cCI6MjA5OTc5MjUwOX0.HKD47YJibY6cYXTuW9x3C-nLm05tsSklWlkaqS8Ms-Q";               // Supabase anon public key
+  const ADMIN_INVITE_CODE = "Foshan-houshuai-2001";                     // 管理员邀请码（注册时输入此码即成为管理员，请改成你自己的）
+  // ▲▲▲ 以上三项改完保存即可，其余无需改动 ▲▲▲
+</script>
+
+<!-- ================= 登录 / 注册 ================= -->
+<div id="auth">
+  <div class="auth-card">
+    <div class="auth-logo">🍊 团队协作云平台</div>
+    <div class="auth-sub">阿里国际站 · 客户需求与智能体资产共享</div>
+    <div class="tabs">
+      <button id="tabLogin" class="on" onclick="switchAuth('login')">登录</button>
+      <button id="tabReg" onclick="switchAuth('reg')">注册</button>
+    </div>
+
+    <!-- 登录 -->
+    <div id="loginForm">
+      <div class="field"><label>邮箱</label><input id="li_email" type="email" placeholder="you@example.com" /></div>
+      <div class="field"><label>密码</label><input id="li_pw" type="password" placeholder="登录密码" /></div>
+      <button class="btn-primary" id="li_btn" onclick="doLogin()">登录</button>
+    </div>
+
+    <!-- 注册 -->
+    <div id="regForm" class="hidden">
+      <div class="field"><label>姓名 *</label><input id="rg_name" placeholder="真实姓名" /></div>
+      <div class="field"><label>工号</label><input id="rg_emp" placeholder="选填，如 A1023" /></div>
+      <div class="field"><label>邮箱 *</label><input id="rg_email" type="email" placeholder="用于登录" /></div>
+      <div class="field"><label>密码 *</label><input id="rg_pw" type="password" placeholder="至少 6 位" />
+        <div class="hint">密码由 Supabase 加密存储，管理员也无法查看明文。</div>
+      </div>
+      <div class="field"><label>管理员邀请码</label><input id="rg_admin" placeholder="选填，主管专用，普通成员留空" />
+        <div class="hint">留空即注册为普通成员。</div>
+      </div>
+      <button class="btn-primary" id="rg_btn" onclick="doRegister()">注册并进入</button>
+    </div>
+
+    <div id="authMsg" class="msg"></div>
+  </div>
+</div>
+
+<!-- ================= 主应用 ================= -->
+<div id="app">
+  <div class="topbar">
+    <div class="brand">🍊 团队协作云平台 <small>阿里国际站</small></div>
+    <div class="userbox">
+      <span id="ub_role" class="role-pill">成员</span>
+      <span id="ub_name"></span>
+      <div class="avatar" id="ub_avatar">-</div>
+      <button class="btn-ghost" onclick="doLogout()">退出</button>
+    </div>
+  </div>
+
+  <div class="nav">
+    <button id="nav_req" class="on" onclick="showTab('req')">📋 客户需求库</button>
+    <button id="nav_asset" onclick="showTab('asset')">🤖 智能体资产库</button>
+    <button id="nav_admin" class="hidden" onclick="showTab('admin')">🛡️ 管理员总览</button>
+  </div>
+
+  <div class="wrap">
+    <!-- 客户需求库 -->
+    <div id="tab_req">
+      <div class="section-head">
+        <h2>客户需求库</h2>
+        <span class="live-dot"><i></i>实时同步中</span>
+      </div>
+      <div class="toolbar">
+        <input id="req_search" placeholder="🔍 搜索公司/品类/需求" oninput="renderReq()" />
+        <select id="req_filter_status" onchange="renderReq()">
+          <option value="">全部状态</option>
+          <option>待跟进</option><option>跟进中</option><option>已成交</option><option>已搁置</option>
+        </select>
+        <input id="req_filter_region" placeholder="按地区筛选" oninput="renderReq()" />
+        <input id="req_filter_cat" placeholder="按品类筛选" oninput="renderReq()" />
+        <button class="btn-add" onclick="openReqModal()">＋ 录入客户需求</button>
+      </div>
+      <div id="req_cards" class="cards"></div>
+    </div>
+
+    <!-- 智能体资产库 -->
+    <div id="tab_asset" class="hidden">
+      <div class="section-head">
+        <h2>智能体资产库</h2>
+        <span class="live-dot"><i></i>实时同步中</span>
+      </div>
+      <div class="toolbar">
+        <input id="asset_search" placeholder="🔍 搜索名称/说明/标签" oninput="renderAsset()" />
+        <select id="asset_filter_type" onchange="renderAsset()">
+          <option value="">全部类型</option>
+          <option>skill</option><option>配置</option><option>文档</option><option>其他</option>
+        </select>
+        <button class="btn-add" onclick="openAssetModal()">＋ 上传智能体资产</button>
+      </div>
+      <div id="asset_cards" class="cards"></div>
+    </div>
+
+    <!-- 管理员总览 -->
+    <div id="tab_admin" class="hidden">
+      <div class="section-head">
+        <h2>管理员总览</h2>
+        <button class="btn-ghost" onclick="exportCSV()">⬇ 导出全部数据 (CSV)</button>
+      </div>
+      <div class="stat-grid" id="admin_stats"></div>
+      <div class="admin-block">
+        <h3>团队成员</h3>
+        <div id="admin_members"></div>
+      </div>
+      <div class="admin-block">
+        <h3>全部客户需求（含各成员）</h3>
+        <div id="admin_reqs"></div>
+      </div>
+      <div class="admin-block">
+        <h3>全部智能体资产</h3>
+        <div id="admin_assets"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 需求录入弹窗 -->
+<div id="reqModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3 id="reqModalTitle">录入客户需求</h3>
+    <input type="hidden" id="req_id" />
+    <div class="grid2">
+      <div class="field"><label>客户公司/名称 *</label><input id="f_company" /></div>
+      <div class="field"><label>品类</label><input id="f_category" placeholder="如 LED灯/五金" /></div>
+      <div class="field"><label>地区/国家</label><input id="f_region" placeholder="如 法国/东南亚" /></div>
+      <div class="field"><label>联系方式</label><input id="f_contact" /></div>
+      <div class="field"><label>预算/规模</label><input id="f_budget" /></div>
+      <div class="field"><label>状态</label>
+        <select id="f_status"><option>待跟进</option><option>跟进中</option><option>已成交</option><option>已搁置</option></select>
+      </div>
+    </div>
+    <div class="field"><label>需求描述 / 痛点</label><textarea id="f_pain" rows="3"></textarea></div>
+    <div class="field"><label>备注</label><textarea id="f_notes" rows="2"></textarea></div>
+    <div class="field"><label>附件（可多选：报价单/邮件/图片等）</label>
+      <div class="dropzone" onclick="document.getElementById('req_files_input').click()">点击选择文件上传</div>
+      <input id="req_files_input" type="file" multiple class="hidden" onchange="stageFiles(this,'req')" />
+      <div id="req_file_list" class="file-list-mini"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('reqModal')">取消</button>
+      <button class="btn-primary" id="reqSaveBtn" onclick="saveReq()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 资产上传弹窗 -->
+<div id="assetModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3 id="assetModalTitle">上传智能体资产</h3>
+    <input type="hidden" id="asset_id" />
+    <div class="grid2">
+      <div class="field"><label>名称 *</label><input id="a_name" placeholder="智能体/资产名称" /></div>
+      <div class="field"><label>类型</label>
+        <select id="a_type"><option>skill</option><option>配置</option><option>文档</option><option>其他</option></select>
+      </div>
+    </div>
+    <div class="field"><label>说明（用途/使用方法）</label><textarea id="a_desc" rows="3"></textarea></div>
+    <div class="field"><label>标签（逗号分隔）</label><input id="a_tags" placeholder="如 接待,议价,英文" /></div>
+    <div class="field"><label>文件（.py/.md/.json/.zip/.pdf 等）</label>
+      <div class="dropzone" onclick="document.getElementById('asset_files_input').click()">点击选择文件上传</div>
+      <input id="asset_files_input" type="file" multiple class="hidden" onchange="stageFiles(this,'asset')" />
+      <div id="asset_file_list" class="file-list-mini"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('assetModal')">取消</button>
+      <button class="btn-primary" id="assetSaveBtn" onclick="saveAsset()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   全局状态
+============================================================ */
+let sb = null;
+let me = null;              // { id, name, employee_no, role }
+let reqData = [];           // 客户需求
+let assetData = [];         // 智能体资产
+let membersData = [];       // 成员档案
+let stagedReqFiles = [];    // 待上传文件（需求）
+let stagedAssetFiles = [];  // 待上传文件（资产）
+
+/* ============================================================
+   初始化
+============================================================ */
+function configReady(){
+  return SUPABASE_URL.indexOf("YOUR-PROJECT") === -1 && SUPABASE_ANON_KEY.indexOf("YOUR-ANON") === -1;
+}
+
+async function init(){
+  if(!configReady()){
+    document.getElementById("auth").innerHTML =
+      "<div class='config-warn'>⚙️ 平台尚未配置后端。请打开 index.html，把顶部配置区的 <b>SUPABASE_URL</b> 与 <b>SUPABASE_ANON_KEY</b> 替换成你的 Supabase 项目值（详见「部署指南.md」），保存后重新上传即可使用。</div>";
+    return;
+  }
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){ await enterApp(); }
+}
+
+/* ============================================================
+   登录 / 注册
+============================================================ */
+function switchAuth(which){
+  const login = which === "login";
+  document.getElementById("tabLogin").classList.toggle("on", login);
+  document.getElementById("tabReg").classList.toggle("on", !login);
+  document.getElementById("loginForm").classList.toggle("hidden", !login);
+  document.getElementById("regForm").classList.toggle("hidden", login);
+  setMsg("");
+}
+function setMsg(t, ok){
+  const el = document.getElementById("authMsg");
+  el.textContent = t; el.className = "msg " + (ok ? "ok" : "err");
+}
+
+async function doRegister(){
+  const name = val("rg_name").trim();
+  const email = val("rg_email").trim();
+  const pw = val("rg_pw");
+  const emp = val("rg_emp").trim();
+  const code = val("rg_admin").trim();
+  if(!name || !email || !pw){ setMsg("请填写姓名、邮箱和密码"); return; }
+  if(pw.length < 6){ setMsg("密码至少 6 位"); return; }
+  const role = (code && code === ADMIN_INVITE_CODE) ? "admin" : "member";
+  if(code && code !== ADMIN_INVITE_CODE){ setMsg("管理员邀请码不正确"); return; }
+
+  btnBusy("rg_btn", true, "注册中…");
+  const { data, error } = await sb.auth.signUp({ email, password: pw });
+  if(error){ setMsg(error.message); btnBusy("rg_btn", false, "注册并进入"); return; }
+
+  // 若开启了邮箱验证，session 可能为空；此处尝试直接登录
+  let uid = data.user ? data.user.id : null;
+  if(!data.session){
+    const { data:d2, error:e2 } = await sb.auth.signInWithPassword({ email, password: pw });
+    if(e2){ setMsg("注册成功，但需先在邮箱确认后再登录（或在 Supabase 关闭邮箱验证）"); btnBusy("rg_btn", false, "注册并进入"); return; }
+    uid = d2.user.id;
+  }
+  // 写入档案
+  await sb.from("profiles").upsert({ id: uid, name, employee_no: emp || null, role });
+  await enterApp();
+}
+
+async function doLogin(){
+  const email = val("li_email").trim();
+  const pw = val("li_pw");
+  if(!email || !pw){ setMsg("请输入邮箱和密码"); return; }
+  btnBusy("li_btn", true, "登录中…");
+  const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+  if(error){ setMsg("登录失败：邮箱或密码错误"); btnBusy("li_btn", false, "登录"); return; }
+  await enterApp();
+}
+
+async function doLogout(){
+  await sb.auth.signOut();
+  location.reload();
+}
+
+/* ============================================================
+   进入应用
+============================================================ */
+async function enterApp(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user){ return; }
+  // 读取/补建档案
+  let { data: prof } = await sb.from("profiles").select("*").eq("id", user.id).single();
+  if(!prof){
+    const fallbackName = (user.email || "成员").split("@")[0];
+    await sb.from("profiles").upsert({ id:user.id, name:fallbackName, role:"member" });
+    prof = { id:user.id, name:fallbackName, role:"member", employee_no:null };
+  }
+  me = prof;
+
+  document.getElementById("auth").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  document.getElementById("ub_name").textContent = me.name + (me.employee_no ? " · " + me.employee_no : "");
+  document.getElementById("ub_avatar").textContent = me.name.charAt(0).toUpperCase();
+  document.getElementById("ub_role").textContent = me.role === "admin" ? "管理员" : "成员";
+  document.getElementById("nav_admin").classList.toggle("hidden", me.role !== "admin");
+
+  await loadAll();
+  subscribeRealtime();
+}
+
+/* ============================================================
+   数据加载
+============================================================ */
+async function loadAll(){
+  const [r, a, m] = await Promise.all([
+    sb.from("customer_requirements").select("*").order("created_at", { ascending:false }),
+    sb.from("agent_assets").select("*").order("created_at", { ascending:false }),
+    sb.from("profiles").select("*").order("created_at", { ascending:true })
+  ]);
+  reqData = r.data || [];
+  assetData = a.data || [];
+  membersData = m.data || [];
+  renderReq(); renderAsset();
+  if(me.role === "admin") renderAdmin();
+}
+
+/* ============================================================
+   实时同步
+============================================================ */
+function subscribeRealtime(){
+  sb.channel("realtime-all")
+    .on("postgres_changes", { event:"*", schema:"public", table:"customer_requirements" }, () => loadAll())
+    .on("postgres_changes", { event:"*", schema:"public", table:"agent_assets" }, () => loadAll())
+    .on("postgres_changes", { event:"*", schema:"public", table:"profiles" }, () => loadAll())
+    .subscribe();
+}
+
+/* ============================================================
+   Tab 切换
+============================================================ */
+function showTab(t){
+  ["req","asset","admin"].forEach(function(k){
+    document.getElementById("tab_"+k).classList.toggle("hidden", k !== t);
+    document.getElementById("nav_"+k).classList.toggle("on", k === t);
+  });
+  if(t === "admin") renderAdmin();
+}
+
+/* ============================================================
+   文件暂存与上传
+============================================================ */
+function stageFiles(input, kind){
+  const arr = kind === "req" ? stagedReqFiles : stagedAssetFiles;
+  for(const f of input.files){ arr.push(f); }
+  input.value = "";
+  renderStaged(kind);
+}
+function renderStaged(kind){
+  const arr = kind === "req" ? stagedReqFiles : stagedAssetFiles;
+  const box = document.getElementById(kind === "req" ? "req_file_list" : "asset_file_list");
+  box.innerHTML = arr.map(function(f,i){
+    return "<div><span>📎 "+esc(f.name)+" ("+fmtSize(f.size)+")</span><button onclick=\"unstage('"+kind+"',"+i+")\">✕</button></div>";
+  }).join("");
+}
+function unstage(kind, i){
+  const arr = kind === "req" ? stagedReqFiles : stagedAssetFiles;
+  arr.splice(i,1); renderStaged(kind);
+}
+async function uploadFiles(files, bucket){
+  const out = [];
+  for(const f of files){
+    const path = me.id + "/" + Date.now() + "-" + Math.random().toString(36).slice(2,7) + "-" + safeName(f.name);
+    const { error } = await sb.storage.from(bucket).upload(path, f, { upsert:false });
+    if(error){ toast("文件上传失败：" + f.name); continue; }
+    out.push({ name:f.name, path:path, size:f.size });
+  }
+  return out;
+}
+async function downloadFile(bucket, path, name){
+  const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 120);
+  if(error){ toast("无法生成下载链接"); return; }
+  const a = document.createElement("a");
+  a.href = data.signedUrl; a.download = name || ""; a.target = "_blank";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ============================================================
+   客户需求库
+============================================================ */
+function openReqModal(item){
+  document.getElementById("reqModalTitle").textContent = item ? "编辑客户需求" : "录入客户需求";
+  document.getElementById("req_id").value = item ? item.id : "";
+  setVal("f_company", item ? item.company : "");
+  setVal("f_category", item ? item.category : "");
+  setVal("f_region", item ? item.region : "");
+  setVal("f_contact", item ? item.contact : "");
+  setVal("f_budget", item ? item.budget : "");
+  setVal("f_status", item ? item.status : "待跟进");
+  setVal("f_pain", item ? item.pain_points : "");
+  setVal("f_notes", item ? item.notes : "");
+  stagedReqFiles = [];
+  document.getElementById("req_file_list").innerHTML = item && item.attachments && item.attachments.length
+    ? "<div class='hint'>已有 " + item.attachments.length + " 个附件，新增的文件将追加。</div>" : "";
+  document.getElementById("reqModal").classList.remove("hidden");
+}
+
+async function saveReq(){
+  const company = val("f_company").trim();
+  if(!company){ toast("请填写客户公司/名称"); return; }
+  btnBusy("reqSaveBtn", true, "保存中…");
+  const id = val("req_id");
+  let attachments = [];
+  if(id){ const ex = reqData.find(function(x){ return x.id === id; }); attachments = (ex && ex.attachments) || []; }
+  if(stagedReqFiles.length){
+    const uploaded = await uploadFiles(stagedReqFiles, "req-files");
+    attachments = attachments.concat(uploaded);
+  }
+  const payload = {
+    company:company, category:val("f_category").trim(), region:val("f_region").trim(),
+    contact:val("f_contact").trim(), budget:val("f_budget").trim(), status:val("f_status"),
+    pain_points:val("f_pain").trim(), notes:val("f_notes").trim(),
+    attachments:attachments, author_name:me.name, updated_at:new Date().toISOString()
+  };
+  let error;
+  if(id){ ({ error } = await sb.from("customer_requirements").update(payload).eq("id", id)); }
+  else { payload.created_by = me.id; ({ error } = await sb.from("customer_requirements").insert(payload)); }
+  btnBusy("reqSaveBtn", false, "保存");
+  if(error){ toast("保存失败：" + error.message); return; }
+  closeModal("reqModal");
+  toast(id ? "已更新" : "已录入");
+  await loadAll();
+}
+
+async function deleteReq(id){
+  if(!confirm("确定删除这条客户需求？")) return;
+  const item = reqData.find(function(x){ return x.id === id; });
+  if(item && item.attachments){ for(const f of item.attachments){ await sb.storage.from("req-files").remove([f.path]); } }
+  const { error } = await sb.from("customer_requirements").delete().eq("id", id);
+  if(error){ toast("删除失败"); return; }
+  toast("已删除"); await loadAll();
+}
+
+function renderReq(){
+  const kw = val("req_search").toLowerCase();
+  const fs = val("req_filter_status");
+  const fr = val("req_filter_region").toLowerCase();
+  const fc = val("req_filter_cat").toLowerCase();
+  const list = reqData.filter(function(x){
+    const blob = [x.company,x.category,x.region,x.pain_points,x.contact,x.notes].join(" ").toLowerCase();
+    if(kw && blob.indexOf(kw) === -1) return false;
+    if(fs && x.status !== fs) return false;
+    if(fr && (x.region||"").toLowerCase().indexOf(fr) === -1) return false;
+    if(fc && (x.category||"").toLowerCase().indexOf(fc) === -1) return false;
+    return true;
+  });
+  const box = document.getElementById("req_cards");
+  if(!list.length){ box.innerHTML = "<div class='empty'>暂无客户需求，点击右上角「＋ 录入客户需求」开始。</div>"; return; }
+  box.innerHTML = list.map(function(x){
+    const mine = x.created_by === me.id || me.role === "admin";
+    return "<div class='card'>"
+      + "<h3>"+esc(x.company)+" <span class='badge "+(x.status||"待跟进")+"'>"+esc(x.status||"待跟进")+"</span></h3>"
+      + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
+      + (x.category ? "<div class='row'><b>品类</b>"+esc(x.category)+"</div>" : "")
+      + (x.region ? "<div class='row'><b>地区</b>"+esc(x.region)+"</div>" : "")
+      + (x.contact ? "<div class='row'><b>联系</b>"+esc(x.contact)+"</div>" : "")
+      + (x.budget ? "<div class='row'><b>预算</b>"+esc(x.budget)+"</div>" : "")
+      + (x.pain_points ? "<div class='row'><b>需求</b>"+esc(x.pain_points)+"</div>" : "")
+      + (x.notes ? "<div class='row'><b>备注</b>"+esc(x.notes)+"</div>" : "")
+      + filesHtml(x.attachments, "req-files")
+      + "<div class='card-actions'>"
+      + (mine ? "<button onclick='editReq(\""+x.id+"\")'>编辑</button><button class='del' onclick='deleteReq(\""+x.id+"\")'>删除</button>" : "<span class='hint'>他人录入</span>")
+      + "</div></div>";
+  }).join("");
+}
+function editReq(id){ openReqModal(reqData.find(function(x){ return x.id === id; })); }
+
+/* ============================================================
+   智能体资产库
+============================================================ */
+function openAssetModal(item){
+  document.getElementById("assetModalTitle").textContent = item ? "编辑智能体资产" : "上传智能体资产";
+  document.getElementById("asset_id").value = item ? item.id : "";
+  setVal("a_name", item ? item.name : "");
+  setVal("a_type", item ? item.asset_type : "skill");
+  setVal("a_desc", item ? item.description : "");
+  setVal("a_tags", item ? item.tags : "");
+  stagedAssetFiles = [];
+  document.getElementById("asset_file_list").innerHTML = item && item.attachments && item.attachments.length
+    ? "<div class='hint'>已有 " + item.attachments.length + " 个文件，新增的文件将追加。</div>" : "";
+  document.getElementById("assetModal").classList.remove("hidden");
+}
+
+async function saveAsset(){
+  const name = val("a_name").trim();
+  if(!name){ toast("请填写名称"); return; }
+  btnBusy("assetSaveBtn", true, "保存中…");
+  const id = val("asset_id");
+  let attachments = [];
+  if(id){ const ex = assetData.find(function(x){ return x.id === id; }); attachments = (ex && ex.attachments) || []; }
+  if(stagedAssetFiles.length){
+    const uploaded = await uploadFiles(stagedAssetFiles, "asset-files");
+    attachments = attachments.concat(uploaded);
+  }
+  const payload = {
+    name:name, asset_type:val("a_type"), description:val("a_desc").trim(),
+    tags:val("a_tags").trim(), attachments:attachments, author_name:me.name,
+    updated_at:new Date().toISOString()
+  };
+  let error;
+  if(id){ ({ error } = await sb.from("agent_assets").update(payload).eq("id", id)); }
+  else { payload.created_by = me.id; ({ error } = await sb.from("agent_assets").insert(payload)); }
+  btnBusy("assetSaveBtn", false, "保存");
+  if(error){ toast("保存失败：" + error.message); return; }
+  closeModal("assetModal");
+  toast(id ? "已更新" : "已上传");
+  await loadAll();
+}
+
+async function deleteAsset(id){
+  if(!confirm("确定删除这个智能体资产？")) return;
+  const item = assetData.find(function(x){ return x.id === id; });
+  if(item && item.attachments){ for(const f of item.attachments){ await sb.storage.from("asset-files").remove([f.path]); } }
+  const { error } = await sb.from("agent_assets").delete().eq("id", id);
+  if(error){ toast("删除失败"); return; }
+  toast("已删除"); await loadAll();
+}
+
+function renderAsset(){
+  const kw = val("asset_search").toLowerCase();
+  const ft = val("asset_filter_type");
+  const list = assetData.filter(function(x){
+    const blob = [x.name,x.description,x.tags,x.asset_type].join(" ").toLowerCase();
+    if(kw && blob.indexOf(kw) === -1) return false;
+    if(ft && x.asset_type !== ft) return false;
+    return true;
+  });
+  const box = document.getElementById("asset_cards");
+  if(!list.length){ box.innerHTML = "<div class='empty'>暂无智能体资产，点击右上角「＋ 上传智能体资产」开始。</div>"; return; }
+  box.innerHTML = list.map(function(x){
+    const mine = x.created_by === me.id || me.role === "admin";
+    const tags = (x.tags||"").split(",").filter(Boolean).map(function(t){ return "<span class='tag'>"+esc(t.trim())+"</span>"; }).join("");
+    return "<div class='card'>"
+      + "<h3>"+esc(x.name)+" <span class='tag'>"+esc(x.asset_type||"skill")+"</span></h3>"
+      + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
+      + (x.description ? "<div class='row'>"+esc(x.description)+"</div>" : "")
+      + (tags ? "<div style='margin-top:6px'>"+tags+"</div>" : "")
+      + filesHtml(x.attachments, "asset-files")
+      + "<div class='card-actions'>"
+      + (mine ? "<button onclick='editAsset(\""+x.id+"\")'>编辑</button><button class='del' onclick='deleteAsset(\""+x.id+"\")'>删除</button>" : "<span class='hint'>他人上传</span>")
+      + "</div></div>";
+  }).join("");
+}
+function editAsset(id){ openAssetModal(assetData.find(function(x){ return x.id === id; })); }
+
+/* ============================================================
+   管理员总览
+============================================================ */
+function renderAdmin(){
+  if(me.role !== "admin") return;
+  const stats = document.getElementById("admin_stats");
+  stats.innerHTML =
+      statCard(membersData.length, "团队成员")
+    + statCard(reqData.length, "客户需求总数")
+    + statCard(assetData.length, "智能体资产总数")
+    + statCard(reqData.filter(function(x){ return x.status==="已成交"; }).length, "已成交客户");
+
+  document.getElementById("admin_members").innerHTML = tableHtml(
+    ["姓名","工号","角色","注册时间"],
+    membersData.map(function(m){ return [m.name, m.employee_no||"-", m.role==="admin"?"管理员":"成员", fmtDate(m.created_at)]; })
+  );
+  document.getElementById("admin_reqs").innerHTML = tableHtml(
+    ["录入人","公司","品类","地区","状态","附件","时间"],
+    reqData.map(function(x){ return [x.author_name||"-", x.company||"-", x.category||"-", x.region||"-", x.status||"-", (x.attachments||[]).length+" 个", fmtDate(x.created_at)]; })
+  );
+  document.getElementById("admin_assets").innerHTML = tableHtml(
+    ["上传人","名称","类型","标签","文件","时间"],
+    assetData.map(function(x){ return [x.author_name||"-", x.name||"-", x.asset_type||"-", x.tags||"-", (x.attachments||[]).length+" 个", fmtDate(x.created_at)]; })
+  );
+}
+
+function exportCSV(){
+  let rows = [["类型","录入/上传人","标题","分类","地区/标签","状态","时间"]];
+  reqData.forEach(function(x){ rows.push(["客户需求", x.author_name||"", x.company||"", x.category||"", x.region||"", x.status||"", fmtDate(x.created_at)]); });
+  assetData.forEach(function(x){ rows.push(["智能体资产", x.author_name||"", x.name||"", x.asset_type||"", x.tags||"", "", fmtDate(x.created_at)]); });
+  const csv = "\uFEFF" + rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(","); }).join("\n");
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "团队数据导出-" + new Date().toISOString().slice(0,10) + ".csv";
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ============================================================
+   工具函数
+============================================================ */
+function filesHtml(atts, bucket){
+  if(!atts || !atts.length) return "";
+  return "<div class='files'>" + atts.map(function(f){
+    return "<span class='file-chip' onclick=\"downloadFile('"+bucket+"','"+f.path+"','"+esc(f.name)+"')\">⬇ "+esc(f.name)+"</span>";
+  }).join("") + "</div>";
+}
+function statCard(n,l){ return "<div class='stat'><div class='num'>"+n+"</div><div class='lbl'>"+l+"</div></div>"; }
+function tableHtml(head, rows){
+  if(!rows.length) return "<div class='empty'>暂无数据</div>";
+  return "<table><thead><tr>" + head.map(function(h){ return "<th>"+h+"</th>"; }).join("") + "</tr></thead><tbody>"
+    + rows.map(function(r){ return "<tr>" + r.map(function(c){ return "<td>"+esc(String(c))+"</td>"; }).join("") + "</tr>"; }).join("")
+    + "</tbody></table>";
+}
+function val(id){ return document.getElementById(id).value; }
+function setVal(id,v){ document.getElementById(id).value = v || ""; }
+function closeModal(id){ document.getElementById(id).classList.add("hidden"); }
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function safeName(s){ return String(s).replace(/[^\w.\-]/g,"_"); }
+function fmtSize(b){ if(b<1024) return b+"B"; if(b<1048576) return (b/1024).toFixed(1)+"KB"; return (b/1048576).toFixed(1)+"MB"; }
+function fmtDate(s){ if(!s) return ""; const d=new Date(s); return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes()); }
+function p(n){ return n<10?"0"+n:n; }
+function btnBusy(id,busy,label){ const b=document.getElementById(id); b.disabled=busy; b.textContent=label; }
+function toast(t){ const el=document.createElement("div"); el.className="toast"; el.textContent=t; document.body.appendChild(el); setTimeout(function(){ el.remove(); },2600); }
+
+/* 关闭弹窗（点击背景） */
+document.addEventListener("click", function(e){
+  if(e.target.classList && e.target.classList.contains("modal-bg")){ e.target.classList.add("hidden"); }
+});
+
+init();
+</script>
+</body>
+</html>
