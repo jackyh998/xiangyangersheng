@@ -236,6 +236,31 @@
   .notif-preview{font-size:12px;color:var(--muted);margin-top:2px;white-space:pre-wrap;word-break:break-word}
   .notif-time{font-size:11px;color:var(--muted);margin-top:3px}
   .notif-empty{text-align:center;color:var(--muted);padding:36px 0;font-size:14px}
+
+  /* ---------- 第五批：需求↔知识库双向关联 ---------- */
+  .link-sub{font-size:12px;font-weight:700;color:var(--muted);margin:12px 0 6px}
+  .link-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .link-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:#eef7f0;color:#0a8f5b;border:1px solid #cfe9d9;padding:4px 10px;border-radius:20px}
+  .link-chip button{border:0;background:none;color:#0a8f5b;cursor:pointer;font-size:12px;opacity:.7;padding:0}
+  .link-chip button:hover{opacity:1;color:var(--danger)}
+  .rec-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:#fff2e6;color:var(--brand);border:1px dashed #ffcfa3;padding:4px 10px;border-radius:20px;cursor:pointer}
+  .rec-chip:hover{background:var(--brand);color:#fff;border-style:solid}
+  .sim-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:#eef4ff;color:#3a63c0;border:1px solid #d4e0ff;padding:4px 10px;border-radius:20px;cursor:pointer}
+  .sim-chip:hover{border-color:#3a63c0;background:#e2ecff}
+  .card-actions button.link:hover{border-color:#0a8f5b;color:#0a8f5b}
+  .ref-count{display:inline-block;min-width:16px;text-align:center;background:var(--bg);border-radius:10px;padding:0 5px;font-size:11px;margin-left:3px}
+
+  .req-suggest{margin:2px 0 14px}
+  .req-suggest:empty{display:none}
+  .req-suggest-inner{background:#f7faf8;border:1px solid #e2efe8;border-radius:12px;padding:12px 14px}
+  .se-sub{font-size:12px;font-weight:700;color:var(--muted);margin:8px 0 6px}
+  .se-sub:first-child{margin-top:0}
+
+  .ar-list{max-height:60vh;overflow:auto}
+  .ar-item{border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;cursor:pointer;background:#fff}
+  .ar-item:hover{border-color:var(--brand)}
+  .ar-co{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .ar-meta{font-size:12px;color:var(--muted);margin-top:4px}
 </style>
 </head>
 <body>
@@ -398,8 +423,8 @@
     <h3 id="reqModalTitle">录入客户需求</h3>
     <input type="hidden" id="req_id" />
     <div class="grid2">
-      <div class="field"><label>客户公司/名称 *</label><input id="f_company" /></div>
-      <div class="field"><label>品类</label><input id="f_category" placeholder="如 LED灯/五金" /></div>
+      <div class="field"><label>客户公司/名称 *</label><input id="f_company" oninput="renderReqEntrySuggest()" /></div>
+      <div class="field"><label>品类</label><input id="f_category" placeholder="如 LED灯/五金" oninput="renderReqEntrySuggest()" /></div>
       <div class="field"><label>地区/国家</label><input id="f_region" placeholder="如 法国/东南亚" /></div>
       <div class="field"><label>联系方式</label><input id="f_contact" /></div>
       <div class="field"><label>预算/规模</label><input id="f_budget" /></div>
@@ -410,14 +435,15 @@
         <select id="f_dept"><option value="">未分组</option><option>运营</option><option>业务</option><option>研发</option><option>生产</option></select>
       </div>
     </div>
-    <div class="field"><label>标签（逗号分隔，如 高意向,大客户,LED）</label><input id="f_tags" placeholder="如 高意向,大客户,LED" /></div>
-    <div class="field"><label>需求描述 / 痛点</label><textarea id="f_pain" rows="3"></textarea></div>
+    <div class="field"><label>标签（逗号分隔，如 高意向,大客户,LED）</label><input id="f_tags" placeholder="如 高意向,大客户,LED" oninput="renderReqEntrySuggest()" /></div>
+    <div class="field"><label>需求描述 / 痛点</label><textarea id="f_pain" rows="3" oninput="renderReqEntrySuggest()"></textarea></div>
     <div class="field"><label>备注</label><textarea id="f_notes" rows="2"></textarea></div>
     <div class="field"><label>附件（可多选：报价单/邮件/图片等）</label>
       <div class="dropzone" onclick="document.getElementById('req_files_input').click()">点击选择文件上传</div>
       <input id="req_files_input" type="file" multiple class="hidden" onchange="stageFiles(this,'req')" />
       <div id="req_file_list" class="file-list-mini"></div>
     </div>
+    <div id="req_suggest" class="req-suggest"></div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal('reqModal')">取消</button>
       <button class="btn-primary" id="reqSaveBtn" onclick="saveReq()">保存</button>
@@ -442,6 +468,9 @@
     <div class="modal-actions" style="justify-content:space-between">
       <button class="btn-primary" id="fu_btn" style="width:auto;padding:10px 22px" onclick="addFollowup()">添加跟进</button>
     </div>
+
+    <div class="cmt-divider">🔗 知识库关联</div>
+    <div id="fu_links"></div>
 
     <div class="cmt-divider">💬 讨论区（可 @同事）</div>
     <div id="fu_comment_thread" class="cmt-thread"></div>
@@ -559,6 +588,18 @@
   </div>
 </div>
 
+<!-- 资产被哪些需求引用 弹窗 -->
+<div id="assetReqsModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3>🔗 关联需求 · <span id="ar_title"></span></h3>
+    <div class="hint" style="margin-bottom:10px">这个资产被用于解决过以下客户需求（点击进入跟进）。</div>
+    <div id="ar_list" class="ar-list"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeModal('assetReqsModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    全局状态
@@ -583,6 +624,8 @@ let commentData = [];       // 评论（需求/资产通用）
 let notifData = [];         // 我的通知
 let currentCommentAsset = null; // 当前打开资产评论弹窗的资产 id
 var mentionSets = {};       // 各评论框的 @提及选择集： rowId -> Set(userId)
+let linkData = [];          // 需求↔资产 关联记录
+let distillForReq = null;   // 正在"沉淀新资产并关联"的需求 id
 
 /* ============================================================
    初始化
@@ -687,7 +730,7 @@ async function enterApp(){
    数据加载
 ============================================================ */
 async function loadAll(){
-  const [r, a, m, f, rc, v, cm, nt] = await Promise.all([
+  const [r, a, m, f, rc, v, cm, nt, la] = await Promise.all([
     sb.from("customer_requirements").select("*").order("created_at", { ascending:false }),
     sb.from("agent_assets").select("*").order("created_at", { ascending:false }),
     sb.from("profiles").select("*").order("created_at", { ascending:true }),
@@ -695,7 +738,8 @@ async function loadAll(){
     sb.from("asset_reactions").select("*"),
     sb.from("asset_versions").select("*").order("version_no", { ascending:false }),
     sb.from("comments").select("*").order("created_at", { ascending:true }),
-    sb.from("notifications").select("*").order("created_at", { ascending:false })
+    sb.from("notifications").select("*").order("created_at", { ascending:false }),
+    sb.from("requirement_assets").select("*").order("created_at", { ascending:true })
   ]);
   reqData = r.data || [];
   assetData = a.data || [];
@@ -705,9 +749,10 @@ async function loadAll(){
   versionData = v.data || [];
   commentData = cm.data || [];
   notifData = nt.data || [];
+  linkData = la.data || [];
   renderReq(); renderAsset();
   updateBellBadge();
-  if(currentFollowReq){ renderTimeline(); renderCommentThread("req", currentFollowReq, "fu_comment_thread"); }
+  if(currentFollowReq){ renderTimeline(); renderCommentThread("req", currentFollowReq, "fu_comment_thread"); renderReqLinks(currentFollowReq); }
   if(currentVersionAsset){ renderVersionList(); }
   if(currentCommentAsset){ renderCommentThread("asset", currentCommentAsset, "cm_thread"); }
   if(!document.getElementById("notifModal").classList.contains("hidden")){ renderNotifs(); }
@@ -727,6 +772,7 @@ function subscribeRealtime(){
     .on("postgres_changes", { event:"*", schema:"public", table:"asset_versions" }, () => loadAll())
     .on("postgres_changes", { event:"*", schema:"public", table:"comments" }, () => loadAll())
     .on("postgres_changes", { event:"*", schema:"public", table:"notifications" }, () => loadAll())
+    .on("postgres_changes", { event:"*", schema:"public", table:"requirement_assets" }, () => loadAll())
     .subscribe();
 }
 
@@ -800,6 +846,7 @@ function openReqModal(item){
   stagedReqFiles = [];
   document.getElementById("req_file_list").innerHTML = item && item.attachments && item.attachments.length
     ? "<div class='hint'>已有 " + item.attachments.length + " 个附件，新增的文件将追加。</div>" : "";
+  renderReqEntrySuggest();
   document.getElementById("reqModal").classList.remove("hidden");
 }
 
@@ -929,6 +976,7 @@ function openFollowups(id){
   mentionSets["fu_mention_row"] = new Set();
   renderMentionChips("fu_mention_row", mentionSets["fu_mention_row"]);
   renderCommentThread("req", id, "fu_comment_thread");
+  renderReqLinks(id);
   document.getElementById("followModal").classList.remove("hidden");
 }
 function renderTimeline(){
@@ -978,6 +1026,7 @@ async function updateReqStatus(){
    智能体资产库
 ============================================================ */
 function openAssetModal(item){
+  distillForReq = null;
   document.getElementById("assetModalTitle").textContent = item ? "编辑智能体资产" : "上传智能体资产";
   document.getElementById("asset_id").value = item ? item.id : "";
   setVal("a_name", item ? item.name : "");
@@ -1009,11 +1058,24 @@ async function saveAsset(){
   };
   let error;
   if(id){ ({ error } = await sb.from("agent_assets").update(payload).eq("id", id)); }
-  else { payload.created_by = me.id; ({ error } = await sb.from("agent_assets").insert(payload)); }
+  else {
+    payload.created_by = me.id;
+    const { data, error: insErr } = await sb.from("agent_assets").insert(payload).select("id").single();
+    error = insErr;
+    // 一键沉淀：新资产建好后自动关联回源需求
+    if(!error && distillForReq && data && data.id){
+      const { error: linkErr } = await sb.from("requirement_assets").insert({
+        req_id: distillForReq, asset_id: data.id, added_by: me.id, added_by_name: me.name,
+        note: "由跟进沉淀生成"
+      });
+      if(linkErr) console.warn("自动关联失败：", linkErr.message);
+    }
+  }
+  const wasDistill = distillForReq;
   btnBusy("assetSaveBtn", false, "保存");
   if(error){ toast("保存失败：" + error.message); return; }
   closeModal("assetModal");
-  toast(id ? "已更新" : "已上传");
+  toast(id ? "已更新" : (wasDistill ? "已沉淀为新资产并关联到需求" : "已上传"));
   await loadAll();
 }
 
@@ -1055,6 +1117,7 @@ function renderAsset(){
     const iLike = myReaction(x.id,"like"), iFav = myReaction(x.id,"favorite");
     const verN = versionData.filter(function(v){ return v.asset_id === x.id; }).length;
     const cmtN = commentData.filter(function(c){ return c.target_type==="asset" && c.target_id === x.id; }).length;
+    const refN = assetRefCount(x.id);
     return "<div class='card'>"
       + "<h3>"+esc(x.name)+" <span class='tag'>"+esc(x.asset_type||"skill")+"</span>"+catBadge+"</h3>"
       + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
@@ -1069,6 +1132,7 @@ function renderAsset(){
       + "<div class='card-actions'>"
       + "<button class='cmt' onclick='openAssetComments(\""+x.id+"\")'>💬 评论<span class='cmt-count'>"+cmtN+"</span></button>"
       + "<button class='ver' onclick='openVersions(\""+x.id+"\")'>🕐 版本<span class='ver-badge'>"+verN+"</span></button>"
+      + "<button class='link' onclick='openAssetReqs(\""+x.id+"\")'>🔗 关联需求<span class='ref-count'>"+refN+"</span></button>"
       + (mine ? "<button onclick='editAsset(\""+x.id+"\")'>编辑</button><button class='del' onclick='deleteAsset(\""+x.id+"\")'>删除</button>" : "<span class='hint'>他人上传</span>")
       + "</div></div>";
   }).join("");
@@ -1290,12 +1354,12 @@ function renderAdmin(){
     membersData.map(function(m){ return [m.name, m.employee_no||"-", m.role==="admin"?"管理员":"成员", fmtDate(m.created_at)]; })
   );
   document.getElementById("admin_reqs").innerHTML = tableHtml(
-    ["录入人","公司","品类","地区","分组","认领人","状态","时间"],
-    reqData.map(function(x){ return [x.author_name||"-", x.company||"-", x.category||"-", x.region||"-", x.dept||"-", x.owner_name||"-", x.status||"-", fmtDate(x.created_at)]; })
+    ["录入人","公司","品类","地区","分组","认领人","状态","关联资产","时间"],
+    reqData.map(function(x){ return [x.author_name||"-", x.company||"-", x.category||"-", x.region||"-", x.dept||"-", x.owner_name||"-", x.status||"-", linkData.filter(function(l){ return l.req_id === x.id; }).length, fmtDate(x.created_at)]; })
   );
   document.getElementById("admin_assets").innerHTML = tableHtml(
-    ["上传人","名称","类型","分类","使用","点赞","收藏","时间"],
-    assetData.map(function(x){ return [x.author_name||"-", x.name||"-", x.asset_type||"-", x.category||"-", (x.use_count||0), countReaction(x.id,"like"), countReaction(x.id,"favorite"), fmtDate(x.created_at)]; })
+    ["上传人","名称","类型","分类","使用","点赞","收藏","被引用","时间"],
+    assetData.map(function(x){ return [x.author_name||"-", x.name||"-", x.asset_type||"-", x.category||"-", (x.use_count||0), countReaction(x.id,"like"), countReaction(x.id,"favorite"), assetRefCount(x.id), fmtDate(x.created_at)]; })
   );
 }
 
@@ -1621,6 +1685,189 @@ async function openNotifTarget(id){
 }
 
 /* ============================================================
+   第五批：需求 ↔ 知识库关联 + 相似推荐 + 闭环沉淀
+============================================================ */
+/* ---------- 匹配算法（纯前端，标签/分类精确 + 中文字符 bigram 重叠） ---------- */
+function _norm(s){ return String(s==null?"":s).toLowerCase(); }
+function _tagList(s){ return _norm(s).split(/[,，;；、\s]+/).filter(Boolean); }
+function _bigrams(s){
+  s = _norm(s).replace(/[\s,，;；、.。/\\|·\-_(){}\[\]]+/g, "");
+  const g = [];
+  for(var i=0;i<s.length-1;i++){ g.push(s.substr(i,2)); }
+  return g;
+}
+function _bigramOverlap(textA, textB){
+  const setB = {}; _bigrams(textB).forEach(function(x){ setB[x]=1; });
+  const seen = {}; let n=0;
+  _bigrams(textA).forEach(function(x){ if(setB[x] && !seen[x]){ seen[x]=1; n++; } });
+  return n;
+}
+// 需求 ↔ 资产 相关度
+function reqAssetScore(req, asset){
+  let s = 0;
+  const rtags = _tagList(req.tags), atags = _tagList(asset.tags);
+  rtags.forEach(function(t){ if(atags.indexOf(t)!==-1) s += 3; });
+  if(req.category && asset.category && req.category === asset.category) s += 3;
+  s += _bigramOverlap([req.company,req.pain_points,req.notes,req.tags,req.category].join(" "),
+                      [asset.name,asset.description,asset.tags,asset.category].join(" ")) * 0.4;
+  return s;
+}
+// 需求 ↔ 需求 相似度
+function reqReqScore(a, b){
+  let s = 0;
+  const at = _tagList(a.tags), bt = _tagList(b.tags);
+  at.forEach(function(t){ if(bt.indexOf(t)!==-1) s += 3; });
+  if(a.category && b.category && a.category === b.category) s += 3;
+  s += _bigramOverlap([a.company,a.pain_points,a.notes,a.tags,a.category].join(" "),
+                      [b.company,b.pain_points,b.notes,b.tags,b.category].join(" ")) * 0.4;
+  return s;
+}
+function similarReqs(req, limit){
+  const scored = reqData.filter(function(r){ return r.id !== req.id; })
+    .map(function(r){ return { item:r, score: reqReqScore(req, r) }; })
+    .filter(function(o){ return o.score >= 1; });
+  scored.sort(function(x,y){ return y.score - x.score; });
+  return scored.slice(0, limit || 5);
+}
+function recommendAssetsFor(req, limit){
+  // 协同信号：解决过相似需求的资产额外加权
+  const sims = similarReqs(req, 5).map(function(o){ return o.item.id; });
+  const boost = {};
+  linkData.forEach(function(l){ if(sims.indexOf(l.req_id) !== -1){ boost[l.asset_id] = (boost[l.asset_id]||0) + 4; } });
+  const linked = {};
+  linkData.forEach(function(l){ if(l.req_id === req.id) linked[l.asset_id] = 1; });
+  const scored = assetData.filter(function(a){ return !linked[a.id]; })
+    .map(function(a){ return { item:a, score: reqAssetScore(req, a) + (boost[a.id]||0) }; })
+    .filter(function(o){ return o.score >= 1; });
+  scored.sort(function(x,y){ return y.score - x.score; });
+  return scored.slice(0, limit || 5);
+}
+
+/* ---------- 关联 / 取消关联 ---------- */
+async function linkAsset(reqId, assetId){
+  if(!reqId || !assetId) return;
+  const { error } = await sb.from("requirement_assets").insert({
+    req_id:reqId, asset_id:assetId, added_by:me.id, added_by_name:me.name
+  });
+  if(error){ toast(/duplicate|unique/i.test(error.message) ? "这个资产已经关联过了" : ("关联失败：" + error.message)); return; }
+  toast("已关联到知识库资产"); await loadAll();
+}
+async function unlinkAsset(linkId){
+  if(!confirm("取消这个关联？")) return;
+  const { error } = await sb.from("requirement_assets").delete().eq("id", linkId);
+  if(error){ toast("操作失败：" + error.message); return; }
+  toast("已取消关联"); await loadAll();
+}
+
+/* ---------- 跟进弹窗内：知识库关联区 ---------- */
+function renderReqLinks(reqId){
+  const box = document.getElementById("fu_links");
+  if(!box) return;
+  const req = reqData.find(function(x){ return x.id === reqId; });
+  if(!req){ box.innerHTML = ""; return; }
+  let html = "";
+
+  // 已关联资产
+  const links = linkData.filter(function(l){ return l.req_id === reqId; });
+  html += "<div class='link-sub'>已关联知识库资产</div>";
+  if(!links.length){
+    html += "<div class='tl-empty'>还没关联任何资产。从下方推荐里挑，或把本次方案沉淀为新资产。</div>";
+  } else {
+    html += "<div class='link-chips'>" + links.map(function(l){
+      const a = assetData.find(function(x){ return x.id === l.asset_id; });
+      const nm = a ? a.name : "（资产已删除）";
+      return "<span class='link-chip'>📦 "+esc(nm)+"<button onclick='unlinkAsset(\""+l.id+"\")' title='取消关联'>✕</button></span>";
+    }).join("") + "</div>";
+  }
+
+  // 推荐资产
+  const recs = recommendAssetsFor(req, 6);
+  if(recs.length){
+    html += "<div class='link-sub'>💡 推荐可复用资产（点击关联）</div><div class='link-chips'>"
+      + recs.map(function(o){ return "<span class='rec-chip' onclick='linkAsset(\""+reqId+"\",\""+o.item.id+"\")'>➕ "+esc(o.item.name)+"</span>"; }).join("")
+      + "</div>";
+  }
+
+  // 相似历史需求
+  const sims = similarReqs(req, 5);
+  if(sims.length){
+    html += "<div class='link-sub'>🧭 相似历史需求（看看别人怎么做的）</div><div class='link-chips'>"
+      + sims.map(function(o){
+          const r = o.item; const cnt = linkData.filter(function(l){ return l.req_id === r.id; }).length;
+          return "<span class='sim-chip' onclick='openFollowups(\""+r.id+"\")'>"+esc(r.company||"需求")+(r.status?" · "+esc(r.status):"")+(cnt?" · 🔗"+cnt:"")+"</span>";
+        }).join("")
+      + "</div>";
+  }
+
+  html += "<div style='margin-top:12px'><button class='btn-ghost' onclick='openDistillModal(\""+reqId+"\")'>✨ 把本次方案沉淀为新资产</button></div>";
+  box.innerHTML = html;
+}
+
+/* ---------- 录入需求时：实时推荐面板 ---------- */
+function renderReqEntrySuggest(){
+  const box = document.getElementById("req_suggest");
+  if(!box) return;
+  const pseudo = {
+    id: val("req_id") || "__new__",
+    company: val("f_company"), category: val("f_category"), tags: val("f_tags"),
+    pain_points: val("f_pain"), notes: val("f_notes")
+  };
+  const signal = (pseudo.company + pseudo.category + pseudo.tags + pseudo.pain_points).replace(/\s/g,"");
+  if(signal.length < 2){ box.innerHTML = ""; return; }
+  const sims = similarReqs(pseudo, 4);
+  const recs = recommendAssetsFor(pseudo, 6);
+  let html = "";
+  if(sims.length){
+    html += "<div class='se-sub'>🧭 已有相似需求（避免重复造轮子）</div><div class='link-chips'>"
+      + sims.map(function(o){ const r=o.item; return "<span class='sim-chip' style='cursor:default'>"+esc(r.company||"需求")+(r.status?" · "+esc(r.status):"")+"</span>"; }).join("")
+      + "</div>";
+  }
+  if(recs.length){
+    html += "<div class='se-sub'>💡 可能能直接复用的知识库资产</div><div class='link-chips'>"
+      + recs.map(function(o){ return "<span class='rec-chip' style='cursor:default'>📦 "+esc(o.item.name)+"</span>"; }).join("")
+      + "</div>";
+  }
+  if(!html){ html = "<div class='tl-empty'>暂无相似需求或可复用资产，这可能是个新场景 👀</div>"; }
+  box.innerHTML = "<div class='req-suggest-inner'>" + html + "</div>";
+}
+
+/* ---------- 一键沉淀新资产（复用资产弹窗，保存后自动关联） ---------- */
+function openDistillModal(reqId){
+  const r = reqData.find(function(x){ return x.id === reqId; });
+  openAssetModal();               // 先按新建打开（会把 distillForReq 重置为 null）
+  distillForReq = reqId;          // 再标记这是"沉淀并关联"流程
+  document.getElementById("assetModalTitle").textContent = "✨ 沉淀方案为新资产";
+  if(r){
+    setVal("a_name", (r.company ? r.company + " · " : "") + "AI方案");
+    setVal("a_desc", "来自客户需求：\n" + (r.pain_points || r.company || ""));
+    setVal("a_tags", r.tags || "");
+    setVal("a_category", r.category || "");
+  }
+}
+
+/* ---------- 资产侧：双向反查（被哪些需求引用） ---------- */
+function assetRefCount(assetId){ return linkData.filter(function(l){ return l.asset_id === assetId; }).length; }
+function openAssetReqs(assetId){
+  const a = assetData.find(function(x){ return x.id === assetId; });
+  document.getElementById("ar_title").textContent = a ? a.name : "资产";
+  const box = document.getElementById("ar_list");
+  const links = linkData.filter(function(l){ return l.asset_id === assetId; });
+  if(!links.length){
+    box.innerHTML = "<div class='tl-empty'>这个资产还没被任何客户需求关联。当它被用于解决某个需求时就会出现在这里。</div>";
+  } else {
+    box.innerHTML = links.map(function(l){
+      const r = reqData.find(function(x){ return x.id === l.req_id; });
+      if(!r) return "";
+      return "<div class='ar-item' onclick='closeModal(\"assetReqsModal\");showTab(\"req\");openFollowups(\""+r.id+"\")'>"
+        + "<div class='ar-co'>"+esc(r.company||"需求")+" <span class='badge "+(r.status||"待跟进")+"'>"+esc(r.status||"待跟进")+"</span></div>"
+        + "<div class='ar-meta'>关联人 "+esc(l.added_by_name||"")+" · "+fmtDate(l.created_at)+"</div>"
+        + "</div>";
+    }).join("");
+  }
+  document.getElementById("assetReqsModal").classList.remove("hidden");
+}
+
+/* ============================================================
    工具函数
 ============================================================ */
 function filesHtml(atts, bucket){
@@ -1638,7 +1885,7 @@ function tableHtml(head, rows){
 }
 function val(id){ return document.getElementById(id).value; }
 function setVal(id,v){ document.getElementById(id).value = v || ""; }
-function closeModal(id){ document.getElementById(id).classList.add("hidden"); if(id==="followModal"){ currentFollowReq = null; } if(id==="versionModal"){ currentVersionAsset = null; } if(id==="previewModal"){ pvCurrent = null; } if(id==="commentModal"){ currentCommentAsset = null; } }
+function closeModal(id){ document.getElementById(id).classList.add("hidden"); if(id==="followModal"){ currentFollowReq = null; } if(id==="versionModal"){ currentVersionAsset = null; } if(id==="previewModal"){ pvCurrent = null; } if(id==="commentModal"){ currentCommentAsset = null; } if(id==="assetModal"){ distillForReq = null; } }
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function safeName(s){ return String(s).replace(/[^\w.\-]/g,"_"); }
 function fmtSize(b){ if(b<1024) return b+"B"; if(b<1048576) return (b/1024).toFixed(1)+"KB"; return (b/1048576).toFixed(1)+"MB"; }
