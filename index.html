@@ -113,17 +113,38 @@
   .admin-block h3{font-size:16px;margin:0 0 12px}
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 22px;border-radius:10px;font-size:14px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.2)}
   .config-warn{background:#fff8e6;border:1px solid #ffe0a3;color:#8a6d1a;padding:14px 18px;border-radius:12px;margin:20px;font-size:13px;line-height:1.6}
+
+  /* ---------- 第一批：分组徽标 / 认领 / 跟进时间线 ---------- */
+  .dept-badge{font-size:11px;padding:2px 9px;border-radius:20px;font-weight:600;background:#eef4ff;color:#3a63c0;margin-left:6px}
+  .dept-badge.运营{background:#e9f2ff;color:#2f6fd6}
+  .dept-badge.业务{background:#fff0e6;color:#d9691e}
+  .dept-badge.研发{background:#eafaf1;color:#0a8f5b}
+  .dept-badge.生产{background:#f3ecff;color:#7a4fd0}
+  .owner-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;background:#fff2e6;color:var(--brand);padding:3px 10px;border-radius:20px;font-weight:600}
+  .owner-none{font-size:12px;color:var(--muted)}
+  .card-actions button.claim{border-color:#ffd8b0;color:var(--brand)}
+  .card-actions button.claim:hover{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .card-actions button.follow:hover{border-color:#4557c7;color:#4557c7}
+  .fu-count{display:inline-block;min-width:16px;text-align:center;background:var(--bg);border-radius:10px;padding:0 5px;font-size:11px;margin-left:3px}
+
+  .timeline{max-height:260px;overflow:auto;margin:6px 0 14px;padding-left:4px;border-left:2px solid var(--line)}
+  .tl-item{position:relative;padding:0 0 14px 16px}
+  .tl-item::before{content:"";position:absolute;left:-6px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--brand)}
+  .tl-item .tl-meta{font-size:12px;color:var(--muted);margin-bottom:3px}
+  .tl-item .tl-note{font-size:13px;white-space:pre-wrap;word-break:break-word}
+  .tl-item .tl-del{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;float:right}
+  .tl-item .tl-del:hover{color:var(--danger)}
+  .tl-empty{color:var(--muted);font-size:13px;padding:10px 0}
 </style>
 </head>
 <body>
 
 <!-- ================= 配置区（部署时只改这里） ================= -->
 <script>
-  // ▼▼▼ 部署时把下面三项替换成你自己的值（见 部署指南.md） ▼▼▼
+  // ▼▼▼ 部署时把下面两项替换成你自己的值（见 部署指南.md） ▼▼▼
   const SUPABASE_URL      = "https://myuezvqfqsprdtbhzvyg.supabase.co";   // Supabase 项目 URL
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im15dWV6dnFmcXNwcmR0Ymh6dnlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMTY1MDksImV4cCI6MjA5OTc5MjUwOX0.HKD47YJibY6cYXTuW9x3C-nLm05tsSklWlkaqS8Ms-Q";               // Supabase anon public key
-  const ADMIN_INVITE_CODE = "Foshan-houshuai-2001";                     // 管理员邀请码（注册时输入此码即成为管理员，请改成你自己的）
-  // ▲▲▲ 以上三项改完保存即可，其余无需改动 ▲▲▲
+  // ▲▲▲ 以上两项改完保存即可，其余无需改动 ▲▲▲
 </script>
 
 <!-- ================= 登录 / 注册 ================= -->
@@ -150,9 +171,6 @@
       <div class="field"><label>邮箱 *</label><input id="rg_email" type="email" placeholder="用于登录" /></div>
       <div class="field"><label>密码 *</label><input id="rg_pw" type="password" placeholder="至少 6 位" />
         <div class="hint">密码由 Supabase 加密存储，管理员也无法查看明文。</div>
-      </div>
-      <div class="field"><label>管理员邀请码</label><input id="rg_admin" placeholder="选填，主管专用，普通成员留空" />
-        <div class="hint">留空即注册为普通成员。</div>
       </div>
       <button class="btn-primary" id="rg_btn" onclick="doRegister()">注册并进入</button>
     </div>
@@ -187,13 +205,19 @@
         <span class="live-dot"><i></i>实时同步中</span>
       </div>
       <div class="toolbar">
-        <input id="req_search" placeholder="🔍 搜索公司/品类/需求" oninput="renderReq()" />
+        <input id="req_search" placeholder="🔍 搜索公司/品类/需求/标签" oninput="renderReq()" />
         <select id="req_filter_status" onchange="renderReq()">
           <option value="">全部状态</option>
           <option>待跟进</option><option>跟进中</option><option>已成交</option><option>已搁置</option>
         </select>
+        <select id="req_filter_dept" onchange="renderReq()">
+          <option value="">全部分组</option>
+          <option>运营</option><option>业务</option><option>研发</option><option>生产</option>
+        </select>
         <input id="req_filter_region" placeholder="按地区筛选" oninput="renderReq()" />
         <input id="req_filter_cat" placeholder="按品类筛选" oninput="renderReq()" />
+        <input id="req_filter_tag" placeholder="按标签筛选" oninput="renderReq()" />
+        <button id="req_mine_btn" class="btn-ghost" onclick="toggleReqMine()">🙋 只看我认领的</button>
         <button class="btn-add" onclick="openReqModal()">＋ 录入客户需求</button>
       </div>
       <div id="req_cards" class="cards"></div>
@@ -253,7 +277,11 @@
       <div class="field"><label>状态</label>
         <select id="f_status"><option>待跟进</option><option>跟进中</option><option>已成交</option><option>已搁置</option></select>
       </div>
+      <div class="field"><label>归属分组</label>
+        <select id="f_dept"><option value="">未分组</option><option>运营</option><option>业务</option><option>研发</option><option>生产</option></select>
+      </div>
     </div>
+    <div class="field"><label>标签（逗号分隔，如 高意向,大客户,LED）</label><input id="f_tags" placeholder="如 高意向,大客户,LED" /></div>
     <div class="field"><label>需求描述 / 痛点</label><textarea id="f_pain" rows="3"></textarea></div>
     <div class="field"><label>备注</label><textarea id="f_notes" rows="2"></textarea></div>
     <div class="field"><label>附件（可多选：报价单/邮件/图片等）</label>
@@ -264,6 +292,27 @@
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal('reqModal')">取消</button>
       <button class="btn-primary" id="reqSaveBtn" onclick="saveReq()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 跟进记录 / 时间线弹窗 -->
+<div id="followModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3>📌 跟进 · <span id="fu_title"></span></h3>
+    <div class="field"><label>更新状态（认领人/录入人/管理员可改）</label>
+      <select id="fu_status" onchange="updateReqStatus()">
+        <option>待跟进</option><option>跟进中</option><option>已成交</option><option>已搁置</option>
+      </select>
+    </div>
+    <label style="font-size:13px;font-weight:600">跟进时间线</label>
+    <div id="fu_timeline" class="timeline"></div>
+    <div class="field"><label>添加一条跟进</label>
+      <textarea id="fu_note" rows="2" placeholder="记录本次跟进：联系情况、下一步计划…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('followModal')">关闭</button>
+      <button class="btn-primary" id="fu_btn" onclick="addFollowup()">添加跟进</button>
     </div>
   </div>
 </div>
@@ -302,6 +351,9 @@ let me = null;              // { id, name, employee_no, role }
 let reqData = [];           // 客户需求
 let assetData = [];         // 智能体资产
 let membersData = [];       // 成员档案
+let followData = [];        // 客户需求跟进记录
+let currentFollowReq = null;// 当前打开跟进弹窗的需求 id
+let reqOnlyMine = false;    // 只看我认领的
 let stagedReqFiles = [];    // 待上传文件（需求）
 let stagedAssetFiles = [];  // 待上传文件（资产）
 
@@ -344,11 +396,8 @@ async function doRegister(){
   const email = val("rg_email").trim();
   const pw = val("rg_pw");
   const emp = val("rg_emp").trim();
-  const code = val("rg_admin").trim();
   if(!name || !email || !pw){ setMsg("请填写姓名、邮箱和密码"); return; }
   if(pw.length < 6){ setMsg("密码至少 6 位"); return; }
-  const role = (code && code === ADMIN_INVITE_CODE) ? "admin" : "member";
-  if(code && code !== ADMIN_INVITE_CODE){ setMsg("管理员邀请码不正确"); return; }
 
   btnBusy("rg_btn", true, "注册中…");
   const { data, error } = await sb.auth.signUp({ email, password: pw });
@@ -361,8 +410,8 @@ async function doRegister(){
     if(e2){ setMsg("注册成功，但需先在邮箱确认后再登录（或在 Supabase 关闭邮箱验证）"); btnBusy("rg_btn", false, "注册并进入"); return; }
     uid = d2.user.id;
   }
-  // 写入档案
-  await sb.from("profiles").upsert({ id: uid, name, employee_no: emp || null, role });
+  // 写入档案（角色固定为普通成员，由数据库强制；管理员由后台指定）
+  await sb.from("profiles").upsert({ id: uid, name, employee_no: emp || null });
   await enterApp();
 }
 
@@ -411,15 +460,18 @@ async function enterApp(){
    数据加载
 ============================================================ */
 async function loadAll(){
-  const [r, a, m] = await Promise.all([
+  const [r, a, m, f] = await Promise.all([
     sb.from("customer_requirements").select("*").order("created_at", { ascending:false }),
     sb.from("agent_assets").select("*").order("created_at", { ascending:false }),
-    sb.from("profiles").select("*").order("created_at", { ascending:true })
+    sb.from("profiles").select("*").order("created_at", { ascending:true }),
+    sb.from("requirement_followups").select("*").order("created_at", { ascending:true })
   ]);
   reqData = r.data || [];
   assetData = a.data || [];
   membersData = m.data || [];
+  followData = f.data || [];
   renderReq(); renderAsset();
+  if(currentFollowReq){ renderTimeline(); }
   if(me.role === "admin") renderAdmin();
 }
 
@@ -431,6 +483,7 @@ function subscribeRealtime(){
     .on("postgres_changes", { event:"*", schema:"public", table:"customer_requirements" }, () => loadAll())
     .on("postgres_changes", { event:"*", schema:"public", table:"agent_assets" }, () => loadAll())
     .on("postgres_changes", { event:"*", schema:"public", table:"profiles" }, () => loadAll())
+    .on("postgres_changes", { event:"*", schema:"public", table:"requirement_followups" }, () => loadAll())
     .subscribe();
 }
 
@@ -495,6 +548,8 @@ function openReqModal(item){
   setVal("f_contact", item ? item.contact : "");
   setVal("f_budget", item ? item.budget : "");
   setVal("f_status", item ? item.status : "待跟进");
+  setVal("f_dept", item ? item.dept : "");
+  setVal("f_tags", item ? item.tags : "");
   setVal("f_pain", item ? item.pain_points : "");
   setVal("f_notes", item ? item.notes : "");
   stagedReqFiles = [];
@@ -517,6 +572,7 @@ async function saveReq(){
   const payload = {
     company:company, category:val("f_category").trim(), region:val("f_region").trim(),
     contact:val("f_contact").trim(), budget:val("f_budget").trim(), status:val("f_status"),
+    dept:val("f_dept"), tags:val("f_tags").trim(),
     pain_points:val("f_pain").trim(), notes:val("f_notes").trim(),
     attachments:attachments, author_name:me.name, updated_at:new Date().toISOString()
   };
@@ -542,22 +598,37 @@ async function deleteReq(id){
 function renderReq(){
   const kw = val("req_search").toLowerCase();
   const fs = val("req_filter_status");
+  const fd = val("req_filter_dept");
   const fr = val("req_filter_region").toLowerCase();
   const fc = val("req_filter_cat").toLowerCase();
+  const ft = val("req_filter_tag").toLowerCase();
   const list = reqData.filter(function(x){
-    const blob = [x.company,x.category,x.region,x.pain_points,x.contact,x.notes].join(" ").toLowerCase();
+    const blob = [x.company,x.category,x.region,x.pain_points,x.contact,x.notes,x.tags].join(" ").toLowerCase();
     if(kw && blob.indexOf(kw) === -1) return false;
     if(fs && x.status !== fs) return false;
+    if(fd && x.dept !== fd) return false;
     if(fr && (x.region||"").toLowerCase().indexOf(fr) === -1) return false;
     if(fc && (x.category||"").toLowerCase().indexOf(fc) === -1) return false;
+    if(ft && (x.tags||"").toLowerCase().indexOf(ft) === -1) return false;
+    if(reqOnlyMine && x.owner_id !== me.id) return false;
     return true;
   });
   const box = document.getElementById("req_cards");
-  if(!list.length){ box.innerHTML = "<div class='empty'>暂无客户需求，点击右上角「＋ 录入客户需求」开始。</div>"; return; }
+  if(!list.length){ box.innerHTML = "<div class='empty'>没有符合条件的客户需求。</div>"; return; }
   box.innerHTML = list.map(function(x){
     const mine = x.created_by === me.id || me.role === "admin";
+    const tags = (x.tags||"").split(",").filter(Boolean).map(function(t){ return "<span class='tag'>"+esc(t.trim())+"</span>"; }).join("");
+    const deptBadge = x.dept ? "<span class='dept-badge "+esc(x.dept)+"'>"+esc(x.dept)+"</span>" : "";
+    const fuCount = followData.filter(function(f){ return f.req_id === x.id; }).length;
+    let ownerRow = "";
+    if(x.owner_id){ ownerRow = "<div class='row'><b>认领人</b><span class='owner-chip'>🙋 "+esc(x.owner_name||"")+(x.owner_id===me.id?"（我）":"")+"</span></div>"; }
+    else { ownerRow = "<div class='row'><b>认领人</b><span class='owner-none'>尚未认领</span></div>"; }
+    let claimBtn = "";
+    if(!x.owner_id){ claimBtn = "<button class='claim' onclick='claimReq(\""+x.id+"\")'>🙋 认领</button>"; }
+    else if(x.owner_id === me.id){ claimBtn = "<button onclick='unclaimReq(\""+x.id+"\")'>取消认领</button>"; }
+    else if(me.role === "admin"){ claimBtn = "<button onclick='unclaimReq(\""+x.id+"\")'>改派</button>"; }
     return "<div class='card'>"
-      + "<h3>"+esc(x.company)+" <span class='badge "+(x.status||"待跟进")+"'>"+esc(x.status||"待跟进")+"</span></h3>"
+      + "<h3>"+esc(x.company)+" <span class='badge "+(x.status||"待跟进")+"'>"+esc(x.status||"待跟进")+"</span>"+deptBadge+"</h3>"
       + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
       + (x.category ? "<div class='row'><b>品类</b>"+esc(x.category)+"</div>" : "")
       + (x.region ? "<div class='row'><b>地区</b>"+esc(x.region)+"</div>" : "")
@@ -565,13 +636,94 @@ function renderReq(){
       + (x.budget ? "<div class='row'><b>预算</b>"+esc(x.budget)+"</div>" : "")
       + (x.pain_points ? "<div class='row'><b>需求</b>"+esc(x.pain_points)+"</div>" : "")
       + (x.notes ? "<div class='row'><b>备注</b>"+esc(x.notes)+"</div>" : "")
+      + ownerRow
+      + (tags ? "<div style='margin-top:6px'>"+tags+"</div>" : "")
       + filesHtml(x.attachments, "req-files")
       + "<div class='card-actions'>"
-      + (mine ? "<button onclick='editReq(\""+x.id+"\")'>编辑</button><button class='del' onclick='deleteReq(\""+x.id+"\")'>删除</button>" : "<span class='hint'>他人录入</span>")
+      + "<button class='follow' onclick='openFollowups(\""+x.id+"\")'>💬 跟进<span class='fu-count'>"+fuCount+"</span></button>"
+      + claimBtn
+      + (mine ? "<button onclick='editReq(\""+x.id+"\")'>编辑</button><button class='del' onclick='deleteReq(\""+x.id+"\")'>删除</button>" : "")
       + "</div></div>";
   }).join("");
 }
 function editReq(id){ openReqModal(reqData.find(function(x){ return x.id === id; })); }
+
+function toggleReqMine(){
+  reqOnlyMine = !reqOnlyMine;
+  const b = document.getElementById("req_mine_btn");
+  b.style.borderColor = reqOnlyMine ? "var(--brand)" : "";
+  b.style.color = reqOnlyMine ? "var(--brand)" : "";
+  b.textContent = reqOnlyMine ? "✓ 只看我认领的" : "🙋 只看我认领的";
+  renderReq();
+}
+
+/* ---------- 认领 / 取消认领 ---------- */
+async function claimReq(id){
+  const { error } = await sb.rpc("claim_requirement", { p_req: id });
+  if(error){ toast("认领失败：" + error.message); return; }
+  toast("已认领，加油完成 💪"); await loadAll();
+}
+async function unclaimReq(id){
+  const { error } = await sb.rpc("unclaim_requirement", { p_req: id });
+  if(error){ toast("操作失败：" + error.message); return; }
+  toast("已取消认领"); await loadAll();
+}
+
+/* ---------- 跟进记录 / 时间线 ---------- */
+function openFollowups(id){
+  currentFollowReq = id;
+  const x = reqData.find(function(r){ return r.id === id; });
+  if(!x) return;
+  document.getElementById("fu_title").textContent = x.company || "客户需求";
+  setVal("fu_status", x.status || "待跟进");
+  const canEdit = x.created_by === me.id || x.owner_id === me.id || me.role === "admin";
+  document.getElementById("fu_status").disabled = !canEdit;
+  setVal("fu_note", "");
+  renderTimeline();
+  document.getElementById("followModal").classList.remove("hidden");
+}
+function renderTimeline(){
+  const box = document.getElementById("fu_timeline");
+  if(!box) return;
+  const list = followData.filter(function(f){ return f.req_id === currentFollowReq; });
+  if(!list.length){ box.innerHTML = "<div class='tl-empty'>暂无跟进记录，在下方添加第一条。</div>"; return; }
+  box.innerHTML = list.map(function(f){
+    const canDel = f.author_id === me.id || me.role === "admin";
+    return "<div class='tl-item'>"
+      + (canDel ? "<button class='tl-del' onclick='deleteFollowup(\""+f.id+"\")'>删除</button>" : "")
+      + "<div class='tl-meta'>"+esc(f.author_name||"")+" · "+fmtDate(f.created_at)+"</div>"
+      + "<div class='tl-note'>"+esc(f.note)+"</div>"
+      + "</div>";
+  }).join("");
+}
+async function addFollowup(){
+  if(!currentFollowReq){ return; }
+  const note = val("fu_note").trim();
+  if(!note){ toast("请输入跟进内容"); return; }
+  btnBusy("fu_btn", true, "提交中…");
+  const { error } = await sb.from("requirement_followups").insert({
+    req_id: currentFollowReq, author_id: me.id, author_name: me.name, note: note
+  });
+  btnBusy("fu_btn", false, "添加跟进");
+  if(error){ toast("提交失败：" + error.message); return; }
+  setVal("fu_note", "");
+  toast("已添加跟进");
+  await loadAll();
+}
+async function deleteFollowup(id){
+  if(!confirm("删除这条跟进记录？")) return;
+  const { error } = await sb.from("requirement_followups").delete().eq("id", id);
+  if(error){ toast("删除失败"); return; }
+  toast("已删除"); await loadAll();
+}
+async function updateReqStatus(){
+  if(!currentFollowReq){ return; }
+  const st = val("fu_status");
+  const { error } = await sb.from("customer_requirements").update({ status: st, updated_at:new Date().toISOString() }).eq("id", currentFollowReq);
+  if(error){ toast("状态更新失败：" + error.message); return; }
+  toast("状态已更新为 " + st);
+  await loadAll();
+}
 
 /* ============================================================
    智能体资产库
@@ -707,7 +859,7 @@ function tableHtml(head, rows){
 }
 function val(id){ return document.getElementById(id).value; }
 function setVal(id,v){ document.getElementById(id).value = v || ""; }
-function closeModal(id){ document.getElementById(id).classList.add("hidden"); }
+function closeModal(id){ document.getElementById(id).classList.add("hidden"); if(id==="followModal"){ currentFollowReq = null; } }
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function safeName(s){ return String(s).replace(/[^\w.\-]/g,"_"); }
 function fmtSize(b){ if(b<1024) return b+"B"; if(b<1048576) return (b/1024).toFixed(1)+"KB"; return (b/1048576).toFixed(1)+"MB"; }
