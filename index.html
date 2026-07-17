@@ -265,6 +265,56 @@
   .ar-meta{font-size:12px;color:var(--muted);margin-top:4px}
   .card.flash{animation:cardflash 2.2s ease}
   @keyframes cardflash{0%{box-shadow:0 0 0 3px var(--brand);border-color:var(--brand)}60%{box-shadow:0 0 0 3px var(--brand);border-color:var(--brand)}100%{box-shadow:var(--shadow);border-color:var(--line)}}
+
+  /* ---- 视图切换 ---- */
+  .view-toggle{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+  .view-toggle button{border:0;background:transparent;padding:8px 15px;font-weight:600;color:var(--muted);font-size:13px;cursor:pointer}
+  .view-toggle button.on{background:var(--brand);color:#fff}
+
+  /* ---- 转化漏斗 ---- */
+  .funnel:empty{display:none}
+  .funnel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:16px;box-shadow:var(--shadow)}
+  .fn-head{display:flex;gap:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:12px}
+  .fn-kpi{min-width:110px}
+  .fn-kpi-num{font-size:26px;font-weight:800;color:var(--brand);line-height:1.1}
+  .fn-kpi-lbl{font-size:12px;color:var(--muted);margin-top:2px}
+  .fn-kpi-lbl small{opacity:.75}
+  .fn-bars{display:flex;flex-direction:column;gap:9px}
+  .fn-row{display:flex;align-items:center;gap:10px}
+  .fn-label{width:56px;font-size:13px;font-weight:600;color:var(--ink);flex:none}
+  .fn-track{flex:1;height:16px;background:var(--bg);border-radius:8px;overflow:hidden}
+  .fn-track i{display:block;height:100%;border-radius:8px;transition:width .4s ease;min-width:2px}
+  .fn-num{width:34px;text-align:right;font-weight:700;font-size:13px;color:var(--ink);flex:none}
+
+  /* ---- 看板 ---- */
+  .kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:start}
+  @media(max-width:900px){.kanban{grid-template-columns:repeat(2,1fr)}}
+  .kb-col{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:10px;min-height:120px;transition:background .15s,border-color .15s}
+  .kb-col.drop-hint{background:#fff2e6;border-color:var(--brand);border-style:dashed}
+  .kb-col-head{display:flex;align-items:center;gap:7px;font-weight:700;font-size:13px;color:var(--ink);margin-bottom:9px;padding:0 2px}
+  .kb-col-head b{margin-left:auto;background:#fff;border-radius:10px;padding:1px 9px;font-size:12px;color:var(--muted)}
+  .kb-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .kb-col-body{display:flex;flex-direction:column;gap:8px}
+  .kb-card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 11px;cursor:pointer;box-shadow:0 1px 2px rgba(20,30,50,.04)}
+  .kb-card:hover{border-color:var(--brand)}
+  .kb-card[draggable=true]{cursor:grab}
+  .kb-card.locked{opacity:.9;cursor:pointer}
+  .kb-card.dragging{opacity:.4;border-style:dashed}
+  .kb-co{font-weight:700;font-size:13px;color:var(--ink)}
+  .kb-meta{font-size:12px;color:var(--muted);margin-top:3px}
+  .kb-empty{font-size:12px;color:var(--muted);text-align:center;padding:14px 0;border:1px dashed var(--line);border-radius:8px}
+
+  /* ---- 打单案例库 ---- */
+  .case-card{border-top:3px solid var(--ok)}
+  .case-sub{font-size:12px;font-weight:700;color:var(--muted);margin:12px 0 6px}
+  .case-win{background:#fff8ee;border:1px solid #ffe3bd;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.6;white-space:pre-wrap;color:var(--ink)}
+  .case-tl{display:flex;flex-direction:column;gap:6px}
+  .case-tl-item{font-size:13px;color:var(--ink);line-height:1.5}
+  .case-tl-date{color:var(--muted);font-size:12px;margin-right:6px}
+
+  /* ---- ROI 榜 ---- */
+  .roi-bar{display:inline-block;vertical-align:middle;width:70px;height:8px;background:var(--bg);border-radius:5px;overflow:hidden;margin-right:8px}
+  .roi-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),#ffb066);border-radius:5px}
 </style>
 </head>
 <body>
@@ -325,6 +375,7 @@
   <div class="nav">
     <button id="nav_req" class="on" onclick="showTab('req')">📋 客户需求库</button>
     <button id="nav_asset" onclick="showTab('asset')">🤖 智能体资产库</button>
+    <button id="nav_case" onclick="showTab('case')">🏆 打单案例库</button>
     <button id="nav_admin" class="hidden" onclick="showTab('admin')">🛡️ 管理员总览</button>
   </div>
 
@@ -333,7 +384,13 @@
     <div id="tab_req">
       <div class="section-head">
         <h2>客户需求库</h2>
-        <span class="live-dot"><i></i>实时同步中</span>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="view-toggle">
+            <button id="rv_list" class="on" onclick="setReqView('list')">☰ 列表</button>
+            <button id="rv_kanban" onclick="setReqView('kanban')">▦ 看板</button>
+          </div>
+          <span class="live-dot"><i></i>实时同步中</span>
+        </div>
       </div>
       <div class="toolbar">
         <input id="req_search" placeholder="🔍 搜索公司/品类/需求/标签" oninput="renderReq()" />
@@ -351,7 +408,21 @@
         <button id="req_mine_btn" class="btn-ghost" onclick="toggleReqMine()">🙋 只看我认领的</button>
         <button class="btn-add" onclick="openReqModal()">＋ 录入客户需求</button>
       </div>
+      <div id="req_funnel" class="funnel"></div>
       <div id="req_cards" class="cards"></div>
+      <div id="req_kanban" class="kanban hidden"></div>
+    </div>
+
+    <!-- 打单案例库 -->
+    <div id="tab_case" class="hidden">
+      <div class="section-head">
+        <h2>🏆 打单案例库</h2>
+        <span class="live-dot"><i></i>成交即自动沉淀</span>
+      </div>
+      <div class="toolbar">
+        <input id="case_search" placeholder="🔍 搜索客户/品类/总结/资产" oninput="renderCases()" />
+      </div>
+      <div id="case_cards" class="cards"></div>
     </div>
 
     <!-- 智能体资产库 -->
@@ -400,6 +471,10 @@
       <div class="admin-block">
         <h3>🏆 团队贡献排行榜</h3>
         <div id="admin_rank"></div>
+      </div>
+      <div class="admin-block">
+        <h3>💎 资产复用 ROI 榜（哪些资产最该复用/沉淀）</h3>
+        <div id="admin_roi"></div>
       </div>
       <div class="admin-block">
         <h3>🔥 成员活跃度</h3>
@@ -604,6 +679,23 @@
   </div>
 </div>
 
+<!-- 成交总结 / 打单案例 弹窗 -->
+<div id="winModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3>🎉 成交总结 · <span id="win_title"></span></h3>
+    <input type="hidden" id="win_req_id" />
+    <div class="hint" style="margin-bottom:10px">写清楚这单是「靠哪些 AI 资产、走了怎样的过程」拿下的，会自动沉淀进打单案例库，供全员抄作业。</div>
+    <div class="field">
+      <label>成交总结 / 打单心得</label>
+      <textarea id="win_note" rows="5" placeholder="例：客户是做户外照明的贸易商，靠「英文接待话术Agent」快速建立信任，再用「报价单自动生成」缩短来回，2 周内下首单。关键动作是……"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('winModal')">稍后再写</button>
+      <button class="btn-primary" id="winSaveBtn" onclick="saveWinNote()">保存到案例库</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    全局状态
@@ -630,6 +722,8 @@ let currentCommentAsset = null; // 当前打开资产评论弹窗的资产 id
 var mentionSets = {};       // 各评论框的 @提及选择集： rowId -> Set(userId)
 let linkData = [];          // 需求↔资产 关联记录
 let distillForReq = null;   // 正在"沉淀新资产并关联"的需求 id
+let reqView = "list";       // 需求库视图：list | kanban
+const KANBAN_COLS = ["待跟进","跟进中","已成交","已搁置"];
 
 /* ============================================================
    初始化
@@ -756,6 +850,7 @@ async function loadAll(){
   linkData = la.data || [];
   renderReq(); renderAsset();
   updateBellBadge();
+  if(!document.getElementById("tab_case").classList.contains("hidden")){ renderCases(); }
   if(currentFollowReq){ renderTimeline(); renderCommentThread("req", currentFollowReq, "fu_comment_thread"); renderReqLinks(currentFollowReq); }
   if(currentVersionAsset){ renderVersionList(); }
   if(currentCommentAsset){ renderCommentThread("asset", currentCommentAsset, "cm_thread"); }
@@ -784,10 +879,11 @@ function subscribeRealtime(){
    Tab 切换
 ============================================================ */
 function showTab(t){
-  ["req","asset","admin"].forEach(function(k){
+  ["req","asset","case","admin"].forEach(function(k){
     document.getElementById("tab_"+k).classList.toggle("hidden", k !== t);
     document.getElementById("nav_"+k).classList.toggle("on", k === t);
   });
+  if(t === "case") renderCases();
   if(t === "admin") renderAdmin();
 }
 
@@ -891,14 +987,14 @@ async function deleteReq(id){
   toast("已删除"); await loadAll();
 }
 
-function renderReq(){
+function filteredReqs(){
   const kw = val("req_search").toLowerCase();
   const fs = val("req_filter_status");
   const fd = val("req_filter_dept");
   const fr = val("req_filter_region").toLowerCase();
   const fc = val("req_filter_cat").toLowerCase();
   const ft = val("req_filter_tag").toLowerCase();
-  const list = reqData.filter(function(x){
+  return reqData.filter(function(x){
     const blob = [x.company,x.category,x.region,x.pain_points,x.contact,x.notes,x.tags].join(" ").toLowerCase();
     if(kw && blob.indexOf(kw) === -1) return false;
     if(fs && x.status !== fs) return false;
@@ -909,38 +1005,135 @@ function renderReq(){
     if(reqOnlyMine && x.owner_id !== me.id) return false;
     return true;
   });
-  const box = document.getElementById("req_cards");
-  if(!list.length){ box.innerHTML = "<div class='empty'>没有符合条件的客户需求。</div>"; return; }
-  box.innerHTML = list.map(function(x){
-    const mine = x.created_by === me.id || me.role === "admin";
-    const tags = (x.tags||"").split(",").filter(Boolean).map(function(t){ return "<span class='tag'>"+esc(t.trim())+"</span>"; }).join("");
-    const deptBadge = x.dept ? "<span class='dept-badge "+esc(x.dept)+"'>"+esc(x.dept)+"</span>" : "";
-    const fuCount = followData.filter(function(f){ return f.req_id === x.id; }).length;
-    let ownerRow = "";
-    if(x.owner_id){ ownerRow = "<div class='row'><b>认领人</b><span class='owner-chip'>🙋 "+esc(x.owner_name||"")+(x.owner_id===me.id?"（我）":"")+"</span></div>"; }
-    else { ownerRow = "<div class='row'><b>认领人</b><span class='owner-none'>尚未认领</span></div>"; }
-    let claimBtn = "";
-    if(!x.owner_id){ claimBtn = "<button class='claim' onclick='claimReq(\""+x.id+"\")'>🙋 认领</button>"; }
-    else if(x.owner_id === me.id){ claimBtn = "<button onclick='unclaimReq(\""+x.id+"\")'>取消认领</button>"; }
-    else if(me.role === "admin"){ claimBtn = "<button onclick='unclaimReq(\""+x.id+"\")'>改派</button>"; }
-    return "<div class='card'>"
-      + "<h3>"+esc(x.company)+" <span class='badge "+(x.status||"待跟进")+"'>"+esc(x.status||"待跟进")+"</span>"+deptBadge+"</h3>"
-      + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
-      + (x.category ? "<div class='row'><b>品类</b>"+esc(x.category)+"</div>" : "")
-      + (x.region ? "<div class='row'><b>地区</b>"+esc(x.region)+"</div>" : "")
-      + (x.contact ? "<div class='row'><b>联系</b>"+esc(x.contact)+"</div>" : "")
-      + (x.budget ? "<div class='row'><b>预算</b>"+esc(x.budget)+"</div>" : "")
-      + (x.pain_points ? "<div class='row'><b>需求</b>"+esc(x.pain_points)+"</div>" : "")
-      + (x.notes ? "<div class='row'><b>备注</b>"+esc(x.notes)+"</div>" : "")
-      + ownerRow
-      + (tags ? "<div style='margin-top:6px'>"+tags+"</div>" : "")
-      + filesHtml(x.attachments, "req-files")
-      + "<div class='card-actions'>"
-      + "<button class='follow' onclick='openFollowups(\""+x.id+"\")'>💬 跟进<span class='fu-count'>"+fuCount+"</span></button>"
-      + claimBtn
-      + (mine ? "<button onclick='editReq(\""+x.id+"\")'>编辑</button><button class='del' onclick='deleteReq(\""+x.id+"\")'>删除</button>" : "")
-      + "</div></div>";
+}
+function reqCardHtml(x){
+  const mine = x.created_by === me.id || me.role === "admin";
+  const tags = (x.tags||"").split(",").filter(Boolean).map(function(t){ return "<span class='tag'>"+esc(t.trim())+"</span>"; }).join("");
+  const deptBadge = x.dept ? "<span class='dept-badge "+esc(x.dept)+"'>"+esc(x.dept)+"</span>" : "";
+  const fuCount = followData.filter(function(f){ return f.req_id === x.id; }).length;
+  const linkN = linkData.filter(function(l){ return l.req_id === x.id; }).length;
+  let ownerRow = "";
+  if(x.owner_id){ ownerRow = "<div class='row'><b>认领人</b><span class='owner-chip'>🙋 "+esc(x.owner_name||"")+(x.owner_id===me.id?"（我）":"")+"</span></div>"; }
+  else { ownerRow = "<div class='row'><b>认领人</b><span class='owner-none'>尚未认领</span></div>"; }
+  let claimBtn = "";
+  if(!x.owner_id){ claimBtn = "<button class='claim' onclick='claimReq(\""+x.id+"\")'>🙋 认领</button>"; }
+  else if(x.owner_id === me.id){ claimBtn = "<button onclick='unclaimReq(\""+x.id+"\")'>取消认领</button>"; }
+  else if(me.role === "admin"){ claimBtn = "<button onclick='unclaimReq(\""+x.id+"\")'>改派</button>"; }
+  return "<div class='card'>"
+    + "<h3>"+esc(x.company)+" <span class='badge "+(x.status||"待跟进")+"'>"+esc(x.status||"待跟进")+"</span>"+deptBadge+"</h3>"
+    + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
+    + (x.category ? "<div class='row'><b>品类</b>"+esc(x.category)+"</div>" : "")
+    + (x.region ? "<div class='row'><b>地区</b>"+esc(x.region)+"</div>" : "")
+    + (x.contact ? "<div class='row'><b>联系</b>"+esc(x.contact)+"</div>" : "")
+    + (x.budget ? "<div class='row'><b>预算</b>"+esc(x.budget)+"</div>" : "")
+    + (x.pain_points ? "<div class='row'><b>需求</b>"+esc(x.pain_points)+"</div>" : "")
+    + (x.notes ? "<div class='row'><b>备注</b>"+esc(x.notes)+"</div>" : "")
+    + ownerRow
+    + (linkN ? "<div class='row'><b>关联资产</b>🔗 "+linkN+" 个</div>" : "")
+    + (tags ? "<div style='margin-top:6px'>"+tags+"</div>" : "")
+    + filesHtml(x.attachments, "req-files")
+    + "<div class='card-actions'>"
+    + "<button class='follow' onclick='openFollowups(\""+x.id+"\")'>💬 跟进<span class='fu-count'>"+fuCount+"</span></button>"
+    + claimBtn
+    + (mine ? "<button onclick='editReq(\""+x.id+"\")'>编辑</button><button class='del' onclick='deleteReq(\""+x.id+"\")'>删除</button>" : "")
+    + "</div></div>";
+}
+function renderReq(){
+  const list = filteredReqs();
+  renderReqFunnel(list);
+  const listBox = document.getElementById("req_cards");
+  const kanBox = document.getElementById("req_kanban");
+  listBox.classList.toggle("hidden", reqView !== "list");
+  kanBox.classList.toggle("hidden", reqView !== "kanban");
+  if(reqView === "kanban"){ renderKanban(list); return; }
+  if(!list.length){ listBox.innerHTML = "<div class='empty'>没有符合条件的客户需求。</div>"; return; }
+  listBox.innerHTML = list.map(reqCardHtml).join("");
+}
+
+/* ---------- 转化漏斗 ---------- */
+function renderReqFunnel(list){
+  const box = document.getElementById("req_funnel");
+  if(!box) return;
+  const total = list.length;
+  const cnt = {};
+  KANBAN_COLS.forEach(function(s){ cnt[s] = 0; });
+  list.forEach(function(x){ const s = x.status || "待跟进"; if(cnt[s] === undefined) cnt[s] = 0; cnt[s]++; });
+  const deals = cnt["已成交"] || 0;
+  const active = total - (cnt["已搁置"] || 0);          // 有效在跑（排除已搁置）
+  const convRate = active > 0 ? Math.round(deals / active * 100) : 0;
+  const colColor = { "待跟进":"#4557c7", "跟进中":"#ff6a00", "已成交":"#0a8f5b", "已搁置":"#9aa4b2" };
+  const maxN = Math.max(1, cnt["待跟进"], cnt["跟进中"], cnt["已成交"], cnt["已搁置"]);
+  let bars = KANBAN_COLS.map(function(s){
+    const n = cnt[s] || 0;
+    const w = Math.round(n / maxN * 100);
+    return "<div class='fn-row'>"
+      + "<span class='fn-label'>"+s+"</span>"
+      + "<div class='fn-track'><i style='width:"+w+"%;background:"+colColor[s]+"'></i></div>"
+      + "<span class='fn-num'>"+n+"</span>"
+      + "</div>";
   }).join("");
+  box.innerHTML =
+      "<div class='fn-head'>"
+    +   "<div class='fn-kpi'><div class='fn-kpi-num'>"+total+"</div><div class='fn-kpi-lbl'>需求总数</div></div>"
+    +   "<div class='fn-kpi'><div class='fn-kpi-num'>"+deals+"</div><div class='fn-kpi-lbl'>已成交</div></div>"
+    +   "<div class='fn-kpi'><div class='fn-kpi-num' style='color:var(--ok)'>"+convRate+"%</div><div class='fn-kpi-lbl'>成交转化率<small>（成交/有效需求）</small></div></div>"
+    + "</div>"
+    + "<div class='fn-bars'>"+bars+"</div>";
+}
+
+/* ---------- 看板视图 + 拖拽 ---------- */
+function renderKanban(list){
+  const box = document.getElementById("req_kanban");
+  if(!box) return;
+  const colColor = { "待跟进":"#4557c7", "跟进中":"#ff6a00", "已成交":"#0a8f5b", "已搁置":"#9aa4b2" };
+  box.innerHTML = KANBAN_COLS.map(function(s){
+    const items = list.filter(function(x){ return (x.status||"待跟进") === s; });
+    const cards = items.length ? items.map(function(x){
+      const canMove = x.created_by === me.id || x.owner_id === me.id || me.role === "admin";
+      const linkN = linkData.filter(function(l){ return l.req_id === x.id; }).length;
+      const owner = x.owner_id ? "🙋 "+esc(x.owner_name||"") : "<span class='owner-none'>未认领</span>";
+      return "<div class='kb-card"+(canMove?"":" locked")+"'"
+        + (canMove ? " draggable='true' ondragstart='dragReq(event,\""+x.id+"\")' ondragend='dragEndReq(event)'" : "")
+        + " onclick='openFollowups(\""+x.id+"\")'>"
+        + "<div class='kb-co'>"+esc(x.company||"客户")+"</div>"
+        + "<div class='kb-meta'>"+(x.category?esc(x.category)+" · ":"")+owner+"</div>"
+        + (linkN ? "<div class='kb-meta'>🔗 关联 "+linkN+" 个资产</div>" : "")
+        + "</div>";
+    }).join("") : "<div class='kb-empty'>拖需求到这里</div>";
+    return "<div class='kb-col' ondragover='allowDrop(event)' ondragleave='dragLeaveCol(event)' ondrop='dropReq(event,\""+s+"\")'>"
+      + "<div class='kb-col-head'><span class='kb-dot' style='background:"+colColor[s]+"'></span>"+s+" <b>"+items.length+"</b></div>"
+      + "<div class='kb-col-body'>"+cards+"</div>"
+      + "</div>";
+  }).join("");
+}
+function setReqView(v){
+  reqView = v;
+  document.getElementById("rv_list").classList.toggle("on", v === "list");
+  document.getElementById("rv_kanban").classList.toggle("on", v === "kanban");
+  renderReq();
+}
+function dragReq(e, id){ e.dataTransfer.setData("text/plain", id); e.dataTransfer.effectAllowed = "move"; e.currentTarget.classList.add("dragging"); }
+function dragEndReq(e){ e.currentTarget.classList.remove("dragging"); }
+function allowDrop(e){ e.preventDefault(); e.currentTarget.classList.add("drop-hint"); }
+function dragLeaveCol(e){ e.currentTarget.classList.remove("drop-hint"); }
+async function dropReq(e, status){
+  e.preventDefault();
+  e.currentTarget.classList.remove("drop-hint");
+  const id = e.dataTransfer.getData("text/plain");
+  if(!id) return;
+  await moveReqStatus(id, status);
+}
+async function moveReqStatus(id, status){
+  const x = reqData.find(function(r){ return r.id === id; });
+  if(!x) return;
+  if((x.status||"待跟进") === status) return;
+  const canEdit = x.created_by === me.id || x.owner_id === me.id || me.role === "admin";
+  if(!canEdit){ toast("只有录入人/认领人/管理员能改这条的状态"); return; }
+  const { error } = await sb.from("customer_requirements").update({ status: status, updated_at:new Date().toISOString() }).eq("id", id);
+  if(error){ toast("状态更新失败：" + error.message); return; }
+  toast("已移动到「" + status + "」");
+  if(status === "已成交" && !(x.win_note && x.win_note.trim())){ openWinNote(id); }
+  await loadAll();
 }
 function editReq(id){ openReqModal(reqData.find(function(x){ return x.id === id; })); }
 
@@ -1020,9 +1213,11 @@ async function deleteFollowup(id){
 async function updateReqStatus(){
   if(!currentFollowReq){ return; }
   const st = val("fu_status");
+  const x = reqData.find(function(r){ return r.id === currentFollowReq; });
   const { error } = await sb.from("customer_requirements").update({ status: st, updated_at:new Date().toISOString() }).eq("id", currentFollowReq);
   if(error){ toast("状态更新失败：" + error.message); return; }
   toast("状态已更新为 " + st);
+  if(st === "已成交" && !(x && x.win_note && x.win_note.trim())){ openWinNote(currentFollowReq); }
   await loadAll();
 }
 
@@ -1352,6 +1547,7 @@ function renderAdmin(){
   renderAdminCharts();
   renderAdminRank();
   renderAdminActivity();
+  renderAssetROI();
 
   document.getElementById("admin_members").innerHTML = tableHtml(
     ["姓名","工号","角色","注册时间"],
@@ -1903,6 +2099,124 @@ function gotoAsset(assetId){
       setTimeout(function(){ el.classList.remove("flash"); }, 2200);
     }
   }, 80);
+}
+
+/* ============================================================
+   打单案例库（成交即自动沉淀）
+============================================================ */
+function renderCases(){
+  const box = document.getElementById("case_cards");
+  if(!box) return;
+  const kw = (val("case_search")||"").toLowerCase();
+  let list = reqData.filter(function(x){ return x.status === "已成交"; });
+  if(kw){
+    list = list.filter(function(x){
+      const linkedNames = linkData.filter(function(l){ return l.req_id === x.id; })
+        .map(function(l){ const a = assetData.find(function(z){ return z.id === l.asset_id; }); return a ? a.name : ""; }).join(" ");
+      const blob = [x.company,x.category,x.region,x.owner_name,x.win_note,x.pain_points,x.tags,linkedNames].join(" ").toLowerCase();
+      return blob.indexOf(kw) !== -1;
+    });
+  }
+  // 最近成交在前
+  list = list.sort(function(a,b){ return new Date(b.updated_at||b.created_at) - new Date(a.updated_at||a.created_at); });
+  if(!list.length){
+    box.innerHTML = "<div class='empty'>还没有已成交的案例。把需求拖到看板「已成交」列、或在跟进里把状态改成「已成交」，这里就会自动生成案例卡 🏆</div>";
+    return;
+  }
+  box.innerHTML = list.map(function(x){
+    const canEdit = x.created_by === me.id || x.owner_id === me.id || me.role === "admin";
+    const links = linkData.filter(function(l){ return l.req_id === x.id; });
+    const assetChips = links.length
+      ? "<div class='link-chips'>" + links.map(function(l){
+          const a = assetData.find(function(z){ return z.id === l.asset_id; });
+          const nm = a ? a.name : "（资产已删除）";
+          return a
+            ? "<span class='chip-link' onclick='gotoAsset(\""+a.id+"\")' title='点击跳转到资产库查看'>📦 "+esc(nm)+"</span>"
+            : "<span style='opacity:.6'>📦 "+esc(nm)+"</span>";
+        }).join("") + "</div>"
+      : "<div class='tl-empty'>本单未关联知识库资产。</div>";
+    const fus = followData.filter(function(f){ return f.req_id === x.id; });
+    const timeline = fus.length
+      ? "<div class='case-tl'>" + fus.map(function(f){
+          return "<div class='case-tl-item'><span class='case-tl-date'>"+fmtDate(f.created_at)+"</span> "+esc(f.note)+"</div>";
+        }).join("") + "</div>"
+      : "<div class='tl-empty'>无跟进记录。</div>";
+    const winHtml = (x.win_note && x.win_note.trim())
+      ? "<div class='case-win'>"+esc(x.win_note)+"</div>"
+      : "<div class='tl-empty'>还没写成交总结。"+(canEdit?"点下面按钮补一份，方便团队复用打法。":"")+"</div>";
+    return "<div class='card case-card'>"
+      + "<h3>🏆 "+esc(x.company||"客户")+"</h3>"
+      + "<div class='meta'>成交人 "+esc(x.owner_name||x.author_name||"")+" · 成交于 "+fmtDate(x.updated_at||x.created_at)+"</div>"
+      + (x.category ? "<div class='row'><b>品类</b>"+esc(x.category)+"</div>" : "")
+      + (x.region ? "<div class='row'><b>地区</b>"+esc(x.region)+"</div>" : "")
+      + (x.pain_points ? "<div class='row'><b>原始需求</b>"+esc(x.pain_points)+"</div>" : "")
+      + "<div class='case-sub'>💡 用到的 AI 资产</div>" + assetChips
+      + "<div class='case-sub'>🧭 跟进过程</div>" + timeline
+      + "<div class='case-sub'>🎯 成交总结（打法沉淀）</div>" + winHtml
+      + "<div class='card-actions'>"
+      + "<button class='follow' onclick='openFollowups(\""+x.id+"\")'>💬 查看跟进</button>"
+      + (canEdit ? "<button onclick='openWinNote(\""+x.id+"\")'>"+((x.win_note&&x.win_note.trim())?"编辑成交总结":"✍️ 补写成交总结")+"</button>" : "")
+      + "</div></div>";
+  }).join("");
+}
+
+function openWinNote(reqId){
+  const x = reqData.find(function(r){ return r.id === reqId; });
+  if(!x) return;
+  setVal("win_req_id", x.id);
+  document.getElementById("win_title").textContent = x.company || "客户需求";
+  setVal("win_note", x.win_note || "");
+  document.getElementById("winModal").classList.remove("hidden");
+}
+async function saveWinNote(){
+  const id = val("win_req_id");
+  if(!id){ closeModal("winModal"); return; }
+  const note = val("win_note").trim();
+  btnBusy("winSaveBtn", true, "保存中…");
+  const { error } = await sb.from("customer_requirements").update({ win_note: note, updated_at:new Date().toISOString() }).eq("id", id);
+  btnBusy("winSaveBtn", false, "保存到案例库");
+  if(error){ toast("保存失败：" + error.message); return; }
+  closeModal("winModal");
+  toast("已存入案例库 🏆");
+  await loadAll();
+}
+
+/* ============================================================
+   资产复用 ROI 榜（管理员看板）
+============================================================ */
+function renderAssetROI(){
+  const box = document.getElementById("admin_roi");
+  if(!box) return;
+  const rows = assetData.map(function(a){
+    const links = linkData.filter(function(l){ return l.asset_id === a.id; });
+    const refs = links.length;
+    const deals = links.filter(function(l){
+      const r = reqData.find(function(z){ return z.id === l.req_id; });
+      return r && r.status === "已成交";
+    }).length;
+    const uses = a.use_count || 0;
+    const likes = countReaction(a.id, "like");
+    const favs = countReaction(a.id, "favorite");
+    const score = refs*2 + deals*5 + uses*1 + likes*1 + favs*1;
+    return { name:a.name, refs:refs, deals:deals, uses:uses, likes:likes, favs:favs, score:score };
+  }).sort(function(x,y){ return y.score - x.score; });
+  if(!rows.length){ box.innerHTML = "<div class='empty'>还没有智能体资产。</div>"; return; }
+  const maxScore = Math.max(1, rows[0].score);
+  const medals = ["🥇","🥈","🥉"];
+  let html = "<table><thead><tr><th>排名</th><th>资产</th><th>被需求关联</th><th>促成成交</th><th>使用</th><th>点赞</th><th>收藏</th><th>ROI 分</th></tr></thead><tbody>";
+  rows.forEach(function(r,i){
+    const cls = i<3 ? "rank-row rank-"+(i+1) : "rank-row";
+    const badge = i<3 ? "<span class='medal'>"+medals[i]+"</span>" : "<span class='rank-badge'>"+(i+1)+"</span>";
+    const w = Math.round(r.score / maxScore * 100);
+    html += "<tr class='"+cls+"'>"
+      + "<td>"+badge+"</td>"
+      + "<td>"+esc(r.name||"-")+"</td>"
+      + "<td>🔗 "+r.refs+"</td><td>"+(r.deals?"✅ "+r.deals:"0")+"</td><td>"+r.uses+"</td><td>"+r.likes+"</td><td>"+r.favs+"</td>"
+      + "<td><div class='roi-bar'><i style='width:"+w+"%'></i></div><span class='score-pill'>"+r.score+"</span></td>"
+      + "</tr>";
+  });
+  html += "</tbody></table><div class='hint' style='margin-top:8px'>ROI 分 = 被需求关联×2 + 促成成交×5 + 使用×1 + 点赞×1 + 收藏×1</div>";
+  box.innerHTML = html;
 }
 
 /* ============================================================
