@@ -183,6 +183,25 @@
   .file-chip .pv{margin-left:2px;opacity:.7}
   .chip-preview{display:inline-flex;align-items:center;gap:5px;font-size:12px;background:#eef4ff;color:#3a63c0;padding:5px 10px;border-radius:8px;margin:3px 4px 0 0;cursor:pointer;border:1px solid transparent}
   .chip-preview:hover{border-color:#3a63c0}
+
+  /* ---------- 第三批：管理员看板 ---------- */
+  .chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .chart-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .chart-card h4{margin:0 0 12px;font-size:14px;color:var(--ink)}
+  .chart-card svg{width:100%;height:auto;display:block;overflow:visible}
+  .chart-empty{color:var(--muted);font-size:13px;padding:24px 0;text-align:center}
+  .chart-legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:12px;color:var(--muted)}
+  .chart-legend span{display:inline-flex;align-items:center;gap:5px}
+  .chart-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .week-card .num{color:var(--ok)}
+  .week-card .lbl small{display:block;color:var(--muted);font-weight:400;margin-top:2px}
+  .rank-row .medal{font-size:16px}
+  .rank-1 td{background:#fffdf3}.rank-2 td{background:#fbfcff}.rank-3 td{background:#fff9f4}
+  .rank-badge{display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:50%;background:var(--bg);color:var(--muted);font-weight:700;font-size:12px}
+  .rank-1 .rank-badge{background:#ffe9a8;color:#a67c00}.rank-2 .rank-badge{background:#e4e8ef;color:#5a6472}.rank-3 .rank-badge{background:#ffd9bd;color:#b55a20}
+  .score-pill{font-weight:800;color:var(--brand)}
+  .act-bar{height:8px;border-radius:6px;background:var(--bg);overflow:hidden;min-width:80px}
+  .act-bar i{display:block;height:100%;background:linear-gradient(90deg,#ff8a3d,#ff6a00)}
 </style>
 </head>
 <body>
@@ -306,6 +325,22 @@
         <button class="btn-ghost" onclick="exportCSV()">⬇ 导出全部数据 (CSV)</button>
       </div>
       <div class="stat-grid" id="admin_stats"></div>
+      <div class="admin-block">
+        <h3>📅 本周新增（周一至今）</h3>
+        <div class="stat-grid" id="admin_week"></div>
+      </div>
+      <div class="admin-block">
+        <h3>📊 数据可视化</h3>
+        <div class="chart-grid" id="admin_charts"></div>
+      </div>
+      <div class="admin-block">
+        <h3>🏆 团队贡献排行榜</h3>
+        <div id="admin_rank"></div>
+      </div>
+      <div class="admin-block">
+        <h3>🔥 成员活跃度</h3>
+        <div id="admin_activity"></div>
+      </div>
       <div class="admin-block">
         <h3>团队成员</h3>
         <div id="admin_members"></div>
@@ -1144,18 +1179,199 @@ function renderAdmin(){
     + statCard(assetData.length, "智能体资产总数")
     + statCard(reqData.filter(function(x){ return x.status==="已成交"; }).length, "已成交客户");
 
+  // 本周新增（周一至今）
+  const ws = weekStart();
+  const newReq = reqData.filter(function(x){ return new Date(x.created_at) >= ws; }).length;
+  const newAsset = assetData.filter(function(x){ return new Date(x.created_at) >= ws; }).length;
+  const newFollow = followData.filter(function(x){ return new Date(x.created_at) >= ws; }).length;
+  const newDeal = reqData.filter(function(x){ return x.status==="已成交" && new Date(x.updated_at||x.created_at) >= ws; }).length;
+  document.getElementById("admin_week").innerHTML =
+      weekCard(newReq, "新增客户需求")
+    + weekCard(newAsset, "新增智能体资产")
+    + weekCard(newFollow, "跟进记录条数")
+    + weekCard(newDeal, "本周新成交");
+
+  renderAdminCharts();
+  renderAdminRank();
+  renderAdminActivity();
+
   document.getElementById("admin_members").innerHTML = tableHtml(
     ["姓名","工号","角色","注册时间"],
     membersData.map(function(m){ return [m.name, m.employee_no||"-", m.role==="admin"?"管理员":"成员", fmtDate(m.created_at)]; })
   );
   document.getElementById("admin_reqs").innerHTML = tableHtml(
-    ["录入人","公司","品类","地区","状态","附件","时间"],
-    reqData.map(function(x){ return [x.author_name||"-", x.company||"-", x.category||"-", x.region||"-", x.status||"-", (x.attachments||[]).length+" 个", fmtDate(x.created_at)]; })
+    ["录入人","公司","品类","地区","分组","认领人","状态","时间"],
+    reqData.map(function(x){ return [x.author_name||"-", x.company||"-", x.category||"-", x.region||"-", x.dept||"-", x.owner_name||"-", x.status||"-", fmtDate(x.created_at)]; })
   );
   document.getElementById("admin_assets").innerHTML = tableHtml(
-    ["上传人","名称","类型","标签","文件","时间"],
-    assetData.map(function(x){ return [x.author_name||"-", x.name||"-", x.asset_type||"-", x.tags||"-", (x.attachments||[]).length+" 个", fmtDate(x.created_at)]; })
+    ["上传人","名称","类型","分类","使用","点赞","收藏","时间"],
+    assetData.map(function(x){ return [x.author_name||"-", x.name||"-", x.asset_type||"-", x.category||"-", (x.use_count||0), countReaction(x.id,"like"), countReaction(x.id,"favorite"), fmtDate(x.created_at)]; })
   );
+}
+
+/* ---------- 看板：工具与统计 ---------- */
+function weekCard(n,l){ return "<div class='stat week-card'><div class='num'>"+n+"</div><div class='lbl'>"+l+"</div></div>"; }
+function weekStart(){
+  const d = new Date();
+  const day = (d.getDay()+6)%7; // 周一=0
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate()-day);
+  return d;
+}
+function memberStats(){
+  const d7 = new Date(Date.now() - 7*86400000);
+  return membersData.map(function(m){
+    const myReqs   = reqData.filter(function(x){ return x.created_by === m.id; });
+    const myAssets = assetData.filter(function(x){ return x.created_by === m.id; });
+    const myFollows= followData.filter(function(x){ return x.author_id === m.id; });
+    const myReacts = reactionData.filter(function(x){ return x.user_id === m.id; });
+    const myVers   = versionData.filter(function(x){ return x.author_id === m.id; });
+    const deals    = reqData.filter(function(x){ return x.status==="已成交" && (x.owner_id === m.id || (!x.owner_id && x.created_by === m.id)); }).length;
+    const dates = [];
+    myReqs.forEach(function(x){ dates.push(x.created_at); });
+    myAssets.forEach(function(x){ dates.push(x.created_at); });
+    myFollows.forEach(function(x){ dates.push(x.created_at); });
+    myVers.forEach(function(x){ dates.push(x.created_at); });
+    myReacts.forEach(function(x){ if(x.created_at) dates.push(x.created_at); });
+    let last = null;
+    dates.forEach(function(s){ const t = new Date(s); if(!last || t > last) last = t; });
+    const recent7 = dates.filter(function(s){ return new Date(s) >= d7; }).length;
+    const reqC = myReqs.length, assetC = myAssets.length, followC = myFollows.length;
+    const total = reqC + assetC + followC + myReacts.length + myVers.length;
+    const score = reqC*2 + assetC*3 + followC*1 + deals*5;
+    return { id:m.id, name:m.name, role:m.role, reqC:reqC, assetC:assetC, followC:followC,
+             deals:deals, reactC:myReacts.length, verC:myVers.length, total:total,
+             recent7:recent7, last:last, score:score };
+  });
+}
+
+/* ---------- 团队贡献排行榜 ---------- */
+function renderAdminRank(){
+  const rows = memberStats().sort(function(a,b){ return b.score - a.score; });
+  const box = document.getElementById("admin_rank");
+  if(!rows.length){ box.innerHTML = "<div class='empty'>暂无成员数据</div>"; return; }
+  const medals = ["🥇","🥈","🥉"];
+  let html = "<table><thead><tr><th>排名</th><th>成员</th><th>录入需求</th><th>上传资产</th><th>跟进</th><th>成交</th><th>贡献分</th></tr></thead><tbody>";
+  rows.forEach(function(r,i){
+    const cls = i<3 ? "rank-row rank-"+(i+1) : "rank-row";
+    const badge = i<3 ? "<span class='medal'>"+medals[i]+"</span>" : "<span class='rank-badge'>"+(i+1)+"</span>";
+    html += "<tr class='"+cls+"'>"
+      + "<td>"+badge+"</td>"
+      + "<td>"+esc(r.name)+(r.role==="admin"?" <span class='role-pill'>管理员</span>":"")+"</td>"
+      + "<td>"+r.reqC+"</td><td>"+r.assetC+"</td><td>"+r.followC+"</td><td>"+r.deals+"</td>"
+      + "<td><span class='score-pill'>"+r.score+"</span></td></tr>";
+  });
+  html += "</tbody></table><div class='hint' style='margin-top:8px'>贡献分 = 录入需求×2 + 上传资产×3 + 跟进×1 + 成交×5</div>";
+  box.innerHTML = html;
+}
+
+/* ---------- 成员活跃度 ---------- */
+function renderAdminActivity(){
+  const rows = memberStats().sort(function(a,b){ return (b.recent7 - a.recent7) || (b.total - a.total); });
+  const box = document.getElementById("admin_activity");
+  if(!rows.length){ box.innerHTML = "<div class='empty'>暂无成员数据</div>"; return; }
+  const maxTotal = Math.max.apply(null, rows.map(function(r){ return r.total; }).concat([1]));
+  let html = "<table><thead><tr><th>成员</th><th>总操作</th><th>近7天</th><th>最近活跃</th><th>活跃度</th></tr></thead><tbody>";
+  rows.forEach(function(r){
+    const pct = Math.round(r.total/maxTotal*100);
+    html += "<tr>"
+      + "<td>"+esc(r.name)+"</td>"
+      + "<td>"+r.total+"</td>"
+      + "<td>"+(r.recent7>0?"<b style='color:var(--ok)'>"+r.recent7+"</b>":"0")+"</td>"
+      + "<td>"+(r.last?fmtDate(r.last.toISOString()):"—")+"</td>"
+      + "<td><div class='act-bar'><i style='width:"+pct+"%'></i></div></td></tr>";
+  });
+  html += "</tbody></table>";
+  box.innerHTML = html;
+}
+
+/* ---------- 数据可视化（纯 SVG，无外部依赖） ---------- */
+function renderAdminCharts(){
+  const box = document.getElementById("admin_charts");
+  // 1. 需求状态分布（环形）
+  const statuses = ["待跟进","跟进中","已成交","已搁置"];
+  const stColors = { "待跟进":"#4557c7","跟进中":"#ff6a00","已成交":"#0a8f5b","已搁置":"#9aa3b0" };
+  const stItems = statuses.map(function(s){ return { label:s, value:reqData.filter(function(x){ return (x.status||"待跟进")===s; }).length, color:stColors[s] }; });
+  // 2. 需求归属分组分布（柱状）
+  const depts = ["运营","业务","研发","生产"];
+  const deptColors = { "运营":"#2f6fd6","业务":"#d9691e","研发":"#0a8f5b","生产":"#7a4fd0" };
+  const deptItems = depts.map(function(d){ return { label:d, value:reqData.filter(function(x){ return x.dept===d; }).length, color:deptColors[d] }; });
+  deptItems.push({ label:"未分组", value:reqData.filter(function(x){ return !x.dept; }).length, color:"#c3c9d4" });
+  // 3. 近14天新增需求趋势（柱状）
+  const trend = [];
+  for(var i=13;i>=0;i--){
+    const day = new Date(); day.setHours(0,0,0,0); day.setDate(day.getDate()-i);
+    const next = new Date(day); next.setDate(next.getDate()+1);
+    const n = reqData.filter(function(x){ const t=new Date(x.created_at); return t>=day && t<next; }).length;
+    trend.push({ label:(day.getMonth()+1)+"/"+day.getDate(), value:n, color:"#ff6a00", showLabel:(i%2===1) });
+  }
+  // 4. 团队贡献 Top（横向条）
+  const top = memberStats().sort(function(a,b){ return b.score-a.score; }).slice(0,6)
+                .map(function(r){ return { label:r.name, value:r.score }; });
+
+  box.innerHTML =
+      chartCard("客户需求状态分布", svgDonut(stItems))
+    + chartCard("需求归属分组分布", svgVBar(deptItems))
+    + chartCard("近 14 天新增需求趋势", svgVBar(trend))
+    + chartCard("团队贡献 Top", svgHBar(top));
+}
+function chartCard(title, inner){ return "<div class='chart-card'><h4>"+esc(title)+"</h4>"+inner+"</div>"; }
+
+function svgDonut(items){
+  const total = items.reduce(function(s,i){ return s+i.value; }, 0);
+  if(!total) return "<div class='chart-empty'>暂无数据</div>";
+  const cx=90, cy=90, r=72, rin=44; let ang=-Math.PI/2; let paths="";
+  items.forEach(function(it){
+    if(!it.value) return;
+    const frac = it.value/total; const a2 = ang + frac*2*Math.PI;
+    const x1=cx+r*Math.cos(ang), y1=cy+r*Math.sin(ang);
+    const x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+    const large = frac>0.5 ? 1 : 0;
+    if(frac >= 0.9999){
+      paths += "<circle cx='"+cx+"' cy='"+cy+"' r='"+r+"' fill='"+it.color+"'/>";
+    } else {
+      paths += "<path d='M"+cx+","+cy+" L"+x1.toFixed(2)+","+y1.toFixed(2)+" A"+r+","+r+" 0 "+large+" 1 "+x2.toFixed(2)+","+y2.toFixed(2)+" Z' fill='"+it.color+"'/>";
+    }
+    ang = a2;
+  });
+  paths += "<circle cx='"+cx+"' cy='"+cy+"' r='"+rin+"' fill='#fff'/>";
+  paths += "<text x='"+cx+"' y='"+(cy-2)+"' text-anchor='middle' font-size='24' font-weight='800' fill='#1f2733'>"+total+"</text>";
+  paths += "<text x='"+cx+"' y='"+(cy+15)+"' text-anchor='middle' font-size='11' fill='#6b7686'>需求总数</text>";
+  const legend = "<div class='chart-legend'>" + items.map(function(it){ return "<span><i style='background:"+it.color+"'></i>"+esc(it.label)+" "+it.value+"</span>"; }).join("") + "</div>";
+  return "<svg viewBox='0 0 180 180'>"+paths+"</svg>"+legend;
+}
+function svgVBar(items){
+  if(!items.length) return "<div class='chart-empty'>暂无数据</div>";
+  const sum = items.reduce(function(s,i){ return s+i.value; }, 0);
+  if(!sum) return "<div class='chart-empty'>暂无数据</div>";
+  const W=340, H=190, pad=26;
+  const max = Math.max.apply(null, items.map(function(i){ return i.value; }).concat([1]));
+  const bw = (W-pad*2)/items.length;
+  let s = "<line x1='"+pad+"' y1='"+(H-pad)+"' x2='"+(W-pad)+"' y2='"+(H-pad)+"' stroke='#e6e9ef'/>";
+  items.forEach(function(it,idx){
+    const h = (it.value/max)*(H-pad*2);
+    const x = pad + idx*bw + bw*0.18;
+    const w = bw*0.64;
+    const y = H-pad-h;
+    s += "<rect x='"+x.toFixed(1)+"' y='"+y.toFixed(1)+"' width='"+w.toFixed(1)+"' height='"+Math.max(h,0).toFixed(1)+"' rx='4' fill='"+(it.color||"#ff6a00")+"'/>";
+    if(it.value) s += "<text x='"+(x+w/2).toFixed(1)+"' y='"+(y-4).toFixed(1)+"' text-anchor='middle' font-size='11' fill='#1f2733'>"+it.value+"</text>";
+    const showLbl = (it.showLabel === undefined) ? true : it.showLabel;
+    if(showLbl) s += "<text x='"+(x+w/2).toFixed(1)+"' y='"+(H-pad+14)+"' text-anchor='middle' font-size='10' fill='#6b7686'>"+esc(it.label)+"</text>";
+  });
+  return "<svg viewBox='0 0 "+W+" "+H+"'>"+s+"</svg>";
+}
+function svgHBar(items){
+  if(!items.length || !items.some(function(i){ return i.value>0; })) return "<div class='chart-empty'>暂无数据</div>";
+  const max = Math.max.apply(null, items.map(function(i){ return i.value; }).concat([1]));
+  const rowH=28, W=340, H=items.length*rowH+8, labelW=76, barMax=W-labelW-46;
+  let s="";
+  items.forEach(function(it,idx){
+    const y = idx*rowH+6; const w = (it.value/max)*barMax;
+    s += "<text x='0' y='"+(y+14)+"' font-size='11' fill='#1f2733'>"+esc(it.label.length>5?it.label.slice(0,5)+"…":it.label)+"</text>";
+    s += "<rect x='"+labelW+"' y='"+(y+3)+"' width='"+Math.max(w,2).toFixed(1)+"' height='15' rx='4' fill='#ff6a00'/>";
+    s += "<text x='"+(labelW+Math.max(w,2)+6).toFixed(1)+"' y='"+(y+15)+"' font-size='11' fill='#6b7686'>"+it.value+"</text>";
+  });
+  return "<svg viewBox='0 0 "+W+" "+H+"'>"+s+"</svg>";
 }
 
 function exportCSV(){
