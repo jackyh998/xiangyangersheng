@@ -202,6 +202,40 @@
   .score-pill{font-weight:800;color:var(--brand)}
   .act-bar{height:8px;border-radius:6px;background:var(--bg);overflow:hidden;min-width:80px}
   .act-bar i{display:block;height:100%;background:linear-gradient(90deg,#ff8a3d,#ff6a00)}
+
+  /* ---------- 第四批：协作评论 + 站内通知 ---------- */
+  .bell{position:relative;border:1px solid var(--line);background:#fff;width:34px;height:34px;border-radius:9px;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center}
+  .bell:hover{border-color:var(--brand)}
+  .bell-badge{position:absolute;top:-6px;right:-6px;min-width:17px;height:17px;line-height:17px;padding:0 4px;border-radius:9px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;text-align:center}
+  .card-actions button.cmt:hover{border-color:#3a63c0;color:#3a63c0}
+  .cmt-count{display:inline-block;min-width:16px;text-align:center;background:var(--bg);border-radius:10px;padding:0 5px;font-size:11px;margin-left:3px}
+
+  .cmt-divider{margin:16px 0 6px;padding-top:14px;border-top:1px solid var(--line);font-size:13px;font-weight:600}
+  .cmt-thread{max-height:240px;overflow:auto;margin:6px 0 12px}
+  .cmt-item{background:var(--bg);border-radius:10px;padding:9px 12px;margin-bottom:8px}
+  .cmt-item .tl-meta{font-size:12px;color:var(--muted);margin-bottom:3px}
+  .cmt-item .tl-note{font-size:13px;white-space:pre-wrap;word-break:break-word}
+  .cmt-item .tl-del{border:0;background:none;color:var(--muted);cursor:pointer;font-size:12px;float:right}
+  .cmt-item .tl-del:hover{color:var(--danger)}
+  .mention-tag{color:#3a63c0;font-weight:600}
+  .mention-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 8px}
+  .mention-chip{font-size:12px;border:1px solid var(--line);background:#fff;color:var(--muted);padding:3px 10px;border-radius:20px;cursor:pointer}
+  .mention-chip:hover{border-color:#3a63c0;color:#3a63c0}
+  .mention-chip.on{background:#eef4ff;border-color:#3a63c0;color:#3a63c0;font-weight:600}
+
+  #notifModal .modal{max-width:480px}
+  .notif-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .notif-list{max-height:60vh;overflow:auto}
+  .notif-item{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border-radius:10px;border:1px solid var(--line);margin-bottom:8px;cursor:pointer;background:#fff}
+  .notif-item:hover{border-color:var(--brand)}
+  .notif-item.unread{background:#fff7f0;border-color:#ffd8b0}
+  .notif-ic{font-size:18px;line-height:1.2}
+  .notif-body{flex:1;min-width:0}
+  .notif-title{font-size:13px;font-weight:600;word-break:break-word}
+  .notif-title .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--brand);margin-left:6px;vertical-align:middle}
+  .notif-preview{font-size:12px;color:var(--muted);margin-top:2px;white-space:pre-wrap;word-break:break-word}
+  .notif-time{font-size:11px;color:var(--muted);margin-top:3px}
+  .notif-empty{text-align:center;color:var(--muted);padding:36px 0;font-size:14px}
 </style>
 </head>
 <body>
@@ -251,6 +285,7 @@
   <div class="topbar">
     <div class="brand">🍊 团队协作云平台 <small>阿里国际站</small></div>
     <div class="userbox">
+      <button class="bell" id="ub_bell" onclick="openNotifs()" title="通知">🔔<span id="ub_bell_badge" class="bell-badge hidden">0</span></button>
       <span id="ub_role" class="role-pill">成员</span>
       <span id="ub_name"></span>
       <div class="avatar" id="ub_avatar">-</div>
@@ -404,9 +439,17 @@
     <div class="field"><label>添加一条跟进</label>
       <textarea id="fu_note" rows="2" placeholder="记录本次跟进：联系情况、下一步计划…"></textarea>
     </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn-primary" id="fu_btn" style="width:auto;padding:10px 22px" onclick="addFollowup()">添加跟进</button>
+    </div>
+
+    <div class="cmt-divider">💬 讨论区（可 @同事）</div>
+    <div id="fu_comment_thread" class="cmt-thread"></div>
+    <div class="mention-row" id="fu_mention_row"></div>
+    <div class="field"><textarea id="fu_comment_input" rows="2" placeholder="说点什么，@同事一起看…"></textarea></div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal('followModal')">关闭</button>
-      <button class="btn-primary" id="fu_btn" onclick="addFollowup()">添加跟进</button>
+      <button class="btn-primary" id="fu_comment_btn" onclick="postComment('req', currentFollowReq, 'fu_comment_input', 'fu_comment_btn', 'fu_mention_row')">发送评论</button>
     </div>
   </div>
 </div>
@@ -488,6 +531,34 @@
   </div>
 </div>
 
+<!-- 资产评论弹窗 -->
+<div id="commentModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3>💬 讨论 · <span id="cm_title"></span></h3>
+    <div id="cm_thread" class="cmt-thread"></div>
+    <div class="mention-row" id="cm_mention_row"></div>
+    <div class="field"><textarea id="cm_input" rows="2" placeholder="说点什么，@同事一起看…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('commentModal')">关闭</button>
+      <button class="btn-primary" id="cm_btn" onclick="postComment('asset', currentCommentAsset, 'cm_input', 'cm_btn', 'cm_mention_row')">发送评论</button>
+    </div>
+  </div>
+</div>
+
+<!-- 通知中心弹窗 -->
+<div id="notifModal" class="modal-bg hidden">
+  <div class="modal">
+    <div class="notif-head">
+      <h3 style="margin:0">🔔 通知中心</h3>
+      <button class="btn-ghost" onclick="markAllNotifRead()">全部标为已读</button>
+    </div>
+    <div id="notif_list" class="notif-list"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeModal('notifModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    全局状态
@@ -508,6 +579,10 @@ let assetCategory = "";     // 当前选中的能力分类（空=全部）
 let stagedVersionFiles = [];// 待上传文件（新版本）
 let currentVersionAsset = null; // 当前打开版本弹窗的资产 id
 let pvCurrent = null;       // 当前预览的文件 {bucket,path,name}
+let commentData = [];       // 评论（需求/资产通用）
+let notifData = [];         // 我的通知
+let currentCommentAsset = null; // 当前打开资产评论弹窗的资产 id
+var mentionSets = {};       // 各评论框的 @提及选择集： rowId -> Set(userId)
 
 /* ============================================================
    初始化
@@ -612,13 +687,15 @@ async function enterApp(){
    数据加载
 ============================================================ */
 async function loadAll(){
-  const [r, a, m, f, rc, v] = await Promise.all([
+  const [r, a, m, f, rc, v, cm, nt] = await Promise.all([
     sb.from("customer_requirements").select("*").order("created_at", { ascending:false }),
     sb.from("agent_assets").select("*").order("created_at", { ascending:false }),
     sb.from("profiles").select("*").order("created_at", { ascending:true }),
     sb.from("requirement_followups").select("*").order("created_at", { ascending:true }),
     sb.from("asset_reactions").select("*"),
-    sb.from("asset_versions").select("*").order("version_no", { ascending:false })
+    sb.from("asset_versions").select("*").order("version_no", { ascending:false }),
+    sb.from("comments").select("*").order("created_at", { ascending:true }),
+    sb.from("notifications").select("*").order("created_at", { ascending:false })
   ]);
   reqData = r.data || [];
   assetData = a.data || [];
@@ -626,9 +703,14 @@ async function loadAll(){
   followData = f.data || [];
   reactionData = rc.data || [];
   versionData = v.data || [];
+  commentData = cm.data || [];
+  notifData = nt.data || [];
   renderReq(); renderAsset();
-  if(currentFollowReq){ renderTimeline(); }
+  updateBellBadge();
+  if(currentFollowReq){ renderTimeline(); renderCommentThread("req", currentFollowReq, "fu_comment_thread"); }
   if(currentVersionAsset){ renderVersionList(); }
+  if(currentCommentAsset){ renderCommentThread("asset", currentCommentAsset, "cm_thread"); }
+  if(!document.getElementById("notifModal").classList.contains("hidden")){ renderNotifs(); }
   if(me.role === "admin") renderAdmin();
 }
 
@@ -643,6 +725,8 @@ function subscribeRealtime(){
     .on("postgres_changes", { event:"*", schema:"public", table:"requirement_followups" }, () => loadAll())
     .on("postgres_changes", { event:"*", schema:"public", table:"asset_reactions" }, () => loadAll())
     .on("postgres_changes", { event:"*", schema:"public", table:"asset_versions" }, () => loadAll())
+    .on("postgres_changes", { event:"*", schema:"public", table:"comments" }, () => loadAll())
+    .on("postgres_changes", { event:"*", schema:"public", table:"notifications" }, () => loadAll())
     .subscribe();
 }
 
@@ -841,6 +925,10 @@ function openFollowups(id){
   document.getElementById("fu_status").disabled = !canEdit;
   setVal("fu_note", "");
   renderTimeline();
+  setVal("fu_comment_input", "");
+  mentionSets["fu_mention_row"] = new Set();
+  renderMentionChips("fu_mention_row", mentionSets["fu_mention_row"]);
+  renderCommentThread("req", id, "fu_comment_thread");
   document.getElementById("followModal").classList.remove("hidden");
 }
 function renderTimeline(){
@@ -966,6 +1054,7 @@ function renderAsset(){
     const likeN = countReaction(x.id,"like"), favN = countReaction(x.id,"favorite");
     const iLike = myReaction(x.id,"like"), iFav = myReaction(x.id,"favorite");
     const verN = versionData.filter(function(v){ return v.asset_id === x.id; }).length;
+    const cmtN = commentData.filter(function(c){ return c.target_type==="asset" && c.target_id === x.id; }).length;
     return "<div class='card'>"
       + "<h3>"+esc(x.name)+" <span class='tag'>"+esc(x.asset_type||"skill")+"</span>"+catBadge+"</h3>"
       + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
@@ -978,6 +1067,7 @@ function renderAsset(){
       + "<span class='react-btn use'>🚀 使用 <b>"+(x.use_count||0)+"</b></span>"
       + "</div>"
       + "<div class='card-actions'>"
+      + "<button class='cmt' onclick='openAssetComments(\""+x.id+"\")'>💬 评论<span class='cmt-count'>"+cmtN+"</span></button>"
       + "<button class='ver' onclick='openVersions(\""+x.id+"\")'>🕐 版本<span class='ver-badge'>"+verN+"</span></button>"
       + (mine ? "<button onclick='editAsset(\""+x.id+"\")'>编辑</button><button class='del' onclick='deleteAsset(\""+x.id+"\")'>删除</button>" : "<span class='hint'>他人上传</span>")
       + "</div></div>";
@@ -1387,6 +1477,150 @@ function exportCSV(){
 }
 
 /* ============================================================
+   第四批：协作评论 + @提及 + 站内通知
+============================================================ */
+function memberName(id){ const m = membersData.find(function(x){ return x.id === id; }); return m ? m.name : "某成员"; }
+
+/* ---------- @提及选择条 ---------- */
+function renderMentionChips(rowId, sel){
+  const row = document.getElementById(rowId);
+  if(!row) return;
+  const others = membersData.filter(function(m){ return m.id !== me.id; });
+  if(!others.length){ row.innerHTML = "<span class='hint'>暂无其他成员可 @</span>"; return; }
+  row.innerHTML = "<span class='hint' style='margin-right:2px'>@提及：</span>" + others.map(function(m){
+    const on = sel && sel.has(m.id);
+    return "<span class='mention-chip"+(on?" on":"")+"' onclick='toggleMentionChip(\""+rowId+"\",\""+m.id+"\")'>"+(on?"✓ ":"@")+esc(m.name)+"</span>";
+  }).join("");
+}
+function toggleMentionChip(rowId, uid){
+  if(!mentionSets[rowId]) mentionSets[rowId] = new Set();
+  const s = mentionSets[rowId];
+  if(s.has(uid)) s.delete(uid); else s.add(uid);
+  renderMentionChips(rowId, s);
+}
+
+/* ---------- 评论列表 ---------- */
+function renderCommentThread(type, id, threadId){
+  const box = document.getElementById(threadId);
+  if(!box) return;
+  const list = commentData.filter(function(c){ return c.target_type === type && c.target_id === id; })
+                          .sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); });
+  if(!list.length){ box.innerHTML = "<div class='tl-empty'>还没有评论，来说两句、@同事一起看。</div>"; return; }
+  box.innerHTML = list.map(function(c){
+    const canDel = c.author_id === me.id || me.role === "admin";
+    return "<div class='cmt-item'>"
+      + (canDel ? "<button class='tl-del' onclick='deleteComment(\""+c.id+"\")'>删除</button>" : "")
+      + "<div class='tl-meta'>"+esc(c.author_name||"")+" · "+fmtDate(c.created_at)+"</div>"
+      + "<div class='tl-note'>"+renderCommentBody(c.body)+"</div>"
+      + "</div>";
+  }).join("");
+}
+function renderCommentBody(t){ return esc(t).replace(/@([^\s@]+)/g, "<span class='mention-tag'>@$1</span>"); }
+
+/* ---------- 发表评论（需求 & 资产通用） ---------- */
+async function postComment(type, id, inputId, btnId, rowId){
+  if(!id){ toast("对象无效"); return; }
+  const body = val(inputId).trim();
+  if(!body){ toast("请输入评论内容"); return; }
+  const sel = mentionSets[rowId] || new Set();
+  const mentions = Array.from(sel);
+  const prefix = mentions.map(function(uid){ return "@"+memberName(uid); }).join(" ");
+  const full = prefix ? (prefix + " " + body) : body;
+  btnBusy(btnId, true, "发送中…");
+  const { error } = await sb.rpc("post_comment", { p_target_type:type, p_target_id:id, p_body:full, p_mentions:mentions });
+  btnBusy(btnId, false, "发送评论");
+  if(error){ toast("评论失败：" + error.message); return; }
+  setVal(inputId, "");
+  if(mentionSets[rowId]) mentionSets[rowId].clear();
+  renderMentionChips(rowId, mentionSets[rowId] || new Set());
+  toast("评论已发送");
+  await loadAll();
+}
+async function deleteComment(id){
+  if(!confirm("删除这条评论？")) return;
+  const { error } = await sb.from("comments").delete().eq("id", id);
+  if(error){ toast("删除失败：" + error.message); return; }
+  toast("已删除"); await loadAll();
+}
+
+/* ---------- 资产评论弹窗 ---------- */
+function openAssetComments(id){
+  currentCommentAsset = id;
+  const x = assetData.find(function(a){ return a.id === id; });
+  document.getElementById("cm_title").textContent = x ? x.name : "资产";
+  setVal("cm_input", "");
+  mentionSets["cm_mention_row"] = new Set();
+  renderMentionChips("cm_mention_row", mentionSets["cm_mention_row"]);
+  renderCommentThread("asset", id, "cm_thread");
+  document.getElementById("commentModal").classList.remove("hidden");
+}
+
+/* ---------- 通知中心 ---------- */
+function updateBellBadge(){
+  const badge = document.getElementById("ub_bell_badge");
+  if(!badge) return;
+  const unread = notifData.filter(function(n){ return !n.is_read; }).length;
+  badge.textContent = unread > 99 ? "99+" : unread;
+  badge.classList.toggle("hidden", unread === 0);
+}
+function notifIcon(type){
+  return type === "mention" ? "💬" : type === "comment" ? "🗨️" : type === "claim" ? "🙋" : type === "status" ? "🔄" : "🔔";
+}
+function openNotifs(){
+  renderNotifs();
+  document.getElementById("notifModal").classList.remove("hidden");
+}
+function renderNotifs(){
+  const box = document.getElementById("notif_list");
+  if(!box) return;
+  const list = notifData.slice().sort(function(a,b){ return new Date(b.created_at) - new Date(a.created_at); });
+  if(!list.length){ box.innerHTML = "<div class='notif-empty'>暂无通知。被 @、评论、认领或状态变更时会在这里提醒你。</div>"; return; }
+  box.innerHTML = list.map(function(n){
+    return "<div class='notif-item"+(n.is_read?"":" unread")+"' onclick='openNotifTarget(\""+n.id+"\")'>"
+      + "<div class='notif-ic'>"+notifIcon(n.type)+"</div>"
+      + "<div class='notif-body'>"
+      + "<div class='notif-title'>"+esc(n.title)+(n.is_read?"":"<span class='dot'></span>")+"</div>"
+      + (n.preview ? "<div class='notif-preview'>"+esc(n.preview)+"</div>" : "")
+      + "<div class='notif-time'>"+fmtDate(n.created_at)+"</div>"
+      + "</div></div>";
+  }).join("");
+}
+async function markNotifRead(id){
+  const n = notifData.find(function(x){ return x.id === id; });
+  if(n && n.is_read) return;
+  const { error } = await sb.from("notifications").update({ is_read:true }).eq("id", id);
+  if(!error){ if(n) n.is_read = true; updateBellBadge(); }
+}
+async function markAllNotifRead(){
+  const unread = notifData.filter(function(n){ return !n.is_read; });
+  if(!unread.length){ toast("没有未读通知"); return; }
+  const { error } = await sb.from("notifications").update({ is_read:true }).eq("user_id", me.id).eq("is_read", false);
+  if(error){ toast("操作失败：" + error.message); return; }
+  notifData.forEach(function(n){ n.is_read = true; });
+  updateBellBadge(); renderNotifs();
+  toast("已全部标为已读");
+}
+async function openNotifTarget(id){
+  const n = notifData.find(function(x){ return x.id === id; });
+  if(!n) return;
+  await markNotifRead(id);
+  renderNotifs();
+  if(n.target_type === "req"){
+    const exists = reqData.some(function(x){ return x.id === n.target_id; });
+    if(!exists){ toast("该需求可能已被删除"); return; }
+    closeModal("notifModal");
+    showTab("req");
+    openFollowups(n.target_id);
+  } else if(n.target_type === "asset"){
+    const exists = assetData.some(function(x){ return x.id === n.target_id; });
+    if(!exists){ toast("该资产可能已被删除"); return; }
+    closeModal("notifModal");
+    showTab("asset");
+    openAssetComments(n.target_id);
+  }
+}
+
+/* ============================================================
    工具函数
 ============================================================ */
 function filesHtml(atts, bucket){
@@ -1404,7 +1638,7 @@ function tableHtml(head, rows){
 }
 function val(id){ return document.getElementById(id).value; }
 function setVal(id,v){ document.getElementById(id).value = v || ""; }
-function closeModal(id){ document.getElementById(id).classList.add("hidden"); if(id==="followModal"){ currentFollowReq = null; } if(id==="versionModal"){ currentVersionAsset = null; } if(id==="previewModal"){ pvCurrent = null; } }
+function closeModal(id){ document.getElementById(id).classList.add("hidden"); if(id==="followModal"){ currentFollowReq = null; } if(id==="versionModal"){ currentVersionAsset = null; } if(id==="previewModal"){ pvCurrent = null; } if(id==="commentModal"){ currentCommentAsset = null; } }
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 function safeName(s){ return String(s).replace(/[^\w.\-]/g,"_"); }
 function fmtSize(b){ if(b<1024) return b+"B"; if(b<1048576) return (b/1024).toFixed(1)+"KB"; return (b/1048576).toFixed(1)+"MB"; }
