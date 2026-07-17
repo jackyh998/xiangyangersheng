@@ -243,6 +243,8 @@
   .link-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;background:#eef7f0;color:#0a8f5b;border:1px solid #cfe9d9;padding:4px 10px;border-radius:20px}
   .link-chip button{border:0;background:none;color:#0a8f5b;cursor:pointer;font-size:12px;opacity:.7;padding:0}
   .link-chip button:hover{opacity:1;color:var(--danger)}
+  .link-chip .chip-link{cursor:pointer}
+  .link-chip .chip-link:hover{text-decoration:underline}
   .rec-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:#fff2e6;color:var(--brand);border:1px dashed #ffcfa3;padding:4px 10px;border-radius:20px;cursor:pointer}
   .rec-chip:hover{background:var(--brand);color:#fff;border-style:solid}
   .sim-chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;background:#eef4ff;color:#3a63c0;border:1px solid #d4e0ff;padding:4px 10px;border-radius:20px;cursor:pointer}
@@ -261,6 +263,8 @@
   .ar-item:hover{border-color:var(--brand)}
   .ar-co{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
   .ar-meta{font-size:12px;color:var(--muted);margin-top:4px}
+  .card.flash{animation:cardflash 2.2s ease}
+  @keyframes cardflash{0%{box-shadow:0 0 0 3px var(--brand);border-color:var(--brand)}60%{box-shadow:0 0 0 3px var(--brand);border-color:var(--brand)}100%{box-shadow:var(--shadow);border-color:var(--line)}}
 </style>
 </head>
 <body>
@@ -1118,7 +1122,7 @@ function renderAsset(){
     const verN = versionData.filter(function(v){ return v.asset_id === x.id; }).length;
     const cmtN = commentData.filter(function(c){ return c.target_type==="asset" && c.target_id === x.id; }).length;
     const refN = assetRefCount(x.id);
-    return "<div class='card'>"
+    return "<div class='card' id='asset-card-"+x.id+"'>"
       + "<h3>"+esc(x.name)+" <span class='tag'>"+esc(x.asset_type||"skill")+"</span>"+catBadge+"</h3>"
       + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
       + (x.description ? "<div class='row'>"+esc(x.description)+"</div>" : "")
@@ -1776,7 +1780,10 @@ function renderReqLinks(reqId){
     html += "<div class='link-chips'>" + links.map(function(l){
       const a = assetData.find(function(x){ return x.id === l.asset_id; });
       const nm = a ? a.name : "（资产已删除）";
-      return "<span class='link-chip'>📦 "+esc(nm)+"<button onclick='unlinkAsset(\""+l.id+"\")' title='取消关联'>✕</button></span>";
+      const nameHtml = a
+        ? "<span class='chip-link' onclick='gotoAsset(\""+a.id+"\")' title='点击跳转到资产库查看'>📦 "+esc(nm)+"</span>"
+        : "<span style='opacity:.6'>📦 "+esc(nm)+"</span>";
+      return "<span class='link-chip'>"+nameHtml+"<button onclick='unlinkAsset(\""+l.id+"\")' title='取消关联'>✕</button></span>";
     }).join("") + "</div>";
   }
 
@@ -1794,7 +1801,7 @@ function renderReqLinks(reqId){
     html += "<div class='link-sub'>🧭 相似历史需求（看看别人怎么做的）</div><div class='link-chips'>"
       + sims.map(function(o){
           const r = o.item; const cnt = linkData.filter(function(l){ return l.req_id === r.id; }).length;
-          return "<span class='sim-chip' onclick='openFollowups(\""+r.id+"\")'>"+esc(r.company||"需求")+(r.status?" · "+esc(r.status):"")+(cnt?" · 🔗"+cnt:"")+"</span>";
+          return "<span class='sim-chip' onclick='gotoReq(\""+r.id+"\")' title='点击跳转到该需求跟进'>"+esc(r.company||"需求")+(r.status?" · "+esc(r.status):"")+(cnt?" · 🔗"+cnt:"")+"</span>";
         }).join("")
       + "</div>";
   }
@@ -1858,13 +1865,42 @@ function openAssetReqs(assetId){
     box.innerHTML = links.map(function(l){
       const r = reqData.find(function(x){ return x.id === l.req_id; });
       if(!r) return "";
-      return "<div class='ar-item' onclick='closeModal(\"assetReqsModal\");showTab(\"req\");openFollowups(\""+r.id+"\")'>"
+      return "<div class='ar-item' onclick='gotoReq(\""+r.id+"\")'>"
         + "<div class='ar-co'>"+esc(r.company||"需求")+" <span class='badge "+(r.status||"待跟进")+"'>"+esc(r.status||"待跟进")+"</span></div>"
         + "<div class='ar-meta'>关联人 "+esc(l.added_by_name||"")+" · "+fmtDate(l.created_at)+"</div>"
         + "</div>";
     }).join("");
   }
   document.getElementById("assetReqsModal").classList.remove("hidden");
+}
+
+/* ---------- 关联项一键跳转 ---------- */
+function gotoReq(reqId){
+  const r = reqData.find(function(x){ return x.id === reqId; });
+  if(!r){ toast("该需求可能已被删除"); return; }
+  closeModal("assetReqsModal");
+  showTab("req");
+  openFollowups(reqId);   // 打开该需求的跟进弹窗（含时间线/关联区/讨论）
+}
+function gotoAsset(assetId){
+  const a = assetData.find(function(x){ return x.id === assetId; });
+  if(!a){ toast("该资产可能已被删除"); return; }
+  closeModal("followModal");
+  closeModal("assetReqsModal");
+  // 清掉筛选，确保目标资产一定可见
+  assetCategory = "";
+  setVal("asset_search", "");
+  setVal("asset_filter_type", "");
+  showTab("asset");
+  renderAsset();
+  setTimeout(function(){
+    const el = document.getElementById("asset-card-" + assetId);
+    if(el){
+      el.scrollIntoView({ behavior:"smooth", block:"center" });
+      el.classList.add("flash");
+      setTimeout(function(){ el.classList.remove("flash"); }, 2200);
+    }
+  }, 80);
 }
 
 /* ============================================================
