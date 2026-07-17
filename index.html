@@ -1826,12 +1826,12 @@ function renderReqEntrySuggest(){
   let html = "";
   if(sims.length){
     html += "<div class='se-sub'>🧭 已有相似需求（避免重复造轮子）</div><div class='link-chips'>"
-      + sims.map(function(o){ const r=o.item; return "<span class='sim-chip' style='cursor:default'>"+esc(r.company||"需求")+(r.status?" · "+esc(r.status):"")+"</span>"; }).join("")
+      + sims.map(function(o){ const r=o.item; return "<span class='sim-chip' onclick='gotoReq(\""+r.id+"\")' title='点击查看这条需求'>"+esc(r.company||"需求")+(r.status?" · "+esc(r.status):"")+"</span>"; }).join("")
       + "</div>";
   }
   if(recs.length){
     html += "<div class='se-sub'>💡 可能能直接复用的知识库资产</div><div class='link-chips'>"
-      + recs.map(function(o){ return "<span class='rec-chip' style='cursor:default'>📦 "+esc(o.item.name)+"</span>"; }).join("")
+      + recs.map(function(o){ return "<span class='rec-chip' onclick='gotoAsset(\""+o.item.id+"\")' title='点击到资产库查看'>📦 "+esc(o.item.name)+"</span>"; }).join("")
       + "</div>";
   }
   if(!html){ html = "<div class='tl-empty'>暂无相似需求或可复用资产，这可能是个新场景 👀</div>"; }
@@ -1878,6 +1878,7 @@ function openAssetReqs(assetId){
 function gotoReq(reqId){
   const r = reqData.find(function(x){ return x.id === reqId; });
   if(!r){ toast("该需求可能已被删除"); return; }
+  closeModal("reqModal");
   closeModal("assetReqsModal");
   showTab("req");
   openFollowups(reqId);   // 打开该需求的跟进弹窗（含时间线/关联区/讨论）
@@ -1885,6 +1886,7 @@ function gotoReq(reqId){
 function gotoAsset(assetId){
   const a = assetData.find(function(x){ return x.id === assetId; });
   if(!a){ toast("该资产可能已被删除"); return; }
+  closeModal("reqModal");
   closeModal("followModal");
   closeModal("assetReqsModal");
   // 清掉筛选，确保目标资产一定可见
