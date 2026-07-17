@@ -315,6 +315,45 @@
   /* ---- ROI 榜 ---- */
   .roi-bar{display:inline-block;vertical-align:middle;width:70px;height:8px;background:var(--bg);border-radius:5px;overflow:hidden;margin-right:8px}
   .roi-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),#ffb066);border-radius:5px}
+
+  /* ---------- 第七批：工作台 / SLA / 精选 / 查重 / 周报 ---------- */
+  .home-hello{font-size:20px;font-weight:800;margin:2px 0 2px}
+  .home-hello .sub{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-top:4px}
+  .home-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  .home-block{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .home-block h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:6px}
+  .home-block .count{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
+  .todo-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer}
+  .todo-item:last-child{border-bottom:0}
+  .todo-item:hover{background:var(--bg)}
+  .todo-co{font-weight:700;font-size:14px}
+  .todo-meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .todo-item .spacer{flex:1}
+  .home-empty{color:var(--muted);font-size:13px;padding:14px 0;text-align:center}
+  @media(max-width:820px){ .home-grid{grid-template-columns:1fr} }
+
+  .sla-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;vertical-align:middle}
+  .sla-badge.warn{background:#fff4e0;color:var(--warn)}
+  .sla-badge.over{background:#ffe4e4;color:var(--danger)}
+
+  .feat-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:#fff4e0;color:var(--warn);vertical-align:middle}
+  .card.featured{border-color:#ffd28a;box-shadow:0 2px 14px rgba(255,150,20,.14)}
+  .card-actions button.feat{border-color:var(--line);background:#fff;color:var(--muted)}
+  .card-actions button.feat.on{border-color:#ffd28a;background:#fff4e0;color:var(--warn)}
+  .card-actions button.guide{border-color:var(--line);background:#fff;color:var(--brand)}
+  .btn-ghost.on{background:#fff4e0;border-color:#ffd28a;color:var(--warn)}
+  .guide-body{white-space:pre-wrap;line-height:1.7;font-size:14px;color:var(--ink)}
+
+  .dedup-group{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px;background:var(--bg)}
+  .dedup-head{display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:10px}
+  .dedup-head .reason{font-size:12px;font-weight:600;color:var(--warn);background:#fff4e0;padding:2px 8px;border-radius:20px}
+  .dedup-row{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:9px;margin-bottom:7px}
+  .dedup-row input[type=radio]{margin:0}
+  .dedup-co{font-weight:700;font-size:13px}
+  .dedup-meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .dedup-row .spacer{flex:1}
+  .dedup-empty{color:var(--muted);font-size:14px;text-align:center;padding:28px 0}
+  .weekly-text{width:100%;min-height:340px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;border:1px solid var(--line);border-radius:10px;padding:14px;resize:vertical;background:var(--bg);color:var(--ink)}
 </style>
 </head>
 <body>
@@ -373,15 +412,43 @@
   </div>
 
   <div class="nav">
-    <button id="nav_req" class="on" onclick="showTab('req')">📋 客户需求库</button>
+    <button id="nav_home" class="on" onclick="showTab('home')">🏠 我的工作台</button>
+    <button id="nav_req" onclick="showTab('req')">📋 客户需求库</button>
     <button id="nav_asset" onclick="showTab('asset')">🤖 智能体资产库</button>
     <button id="nav_case" onclick="showTab('case')">🏆 打单案例库</button>
     <button id="nav_admin" class="hidden" onclick="showTab('admin')">🛡️ 管理员总览</button>
   </div>
 
   <div class="wrap">
+    <!-- 我的工作台 -->
+    <div id="tab_home">
+      <div class="section-head">
+        <h2>🏠 我的工作台</h2>
+        <div style="display:flex;gap:10px">
+          <button class="btn-ghost" onclick="openDedup()">🔀 需求查重合并</button>
+          <button class="btn-add" onclick="openWeekly()">🧾 一键周报</button>
+        </div>
+      </div>
+      <div id="home_hello" class="home-hello"></div>
+      <div class="stat-grid" id="home_stats"></div>
+      <div class="home-grid">
+        <div class="home-block">
+          <h3>⏰ 待我跟进（超时/预警优先）</h3>
+          <div id="home_todo"></div>
+        </div>
+        <div class="home-block">
+          <h3>🔔 与我相关的最新动态</h3>
+          <div id="home_notif"></div>
+        </div>
+      </div>
+      <div class="home-block">
+        <h3>🙋 我认领的客户需求</h3>
+        <div id="home_mine" class="cards"></div>
+      </div>
+    </div>
+
     <!-- 客户需求库 -->
-    <div id="tab_req">
+    <div id="tab_req" class="hidden">
       <div class="section-head">
         <h2>客户需求库</h2>
         <div style="display:flex;align-items:center;gap:12px">
@@ -446,6 +513,7 @@
               <option value="use">按使用次数</option>
               <option value="fav">按收藏</option>
             </select>
+            <button id="asset_feat_btn" class="btn-ghost" onclick="toggleAssetFeatured()">⭐ 只看精选</button>
             <button class="btn-add" onclick="openAssetModal()">＋ 上传智能体资产</button>
           </div>
           <div id="asset_cards" class="cards"></div>
@@ -587,6 +655,7 @@
       </select>
     </div>
     <div class="field"><label>说明（用途/使用方法）</label><textarea id="a_desc" rows="3"></textarea></div>
+    <div class="field"><label>📖 使用指引（怎么用、上手步骤、注意事项 —— 让同事拿来即用）</label><textarea id="a_usage" rows="4" placeholder="例：适用场景=新客户首次英文接待；怎么用=把客户询盘粘进去，选语气「专业热情」；提醒=报价数字需人工复核"></textarea></div>
     <div class="field"><label>标签（逗号分隔）</label><input id="a_tags" placeholder="如 接待,议价,英文" /></div>
     <div class="field"><label>文件（.py/.md/.json/.zip/.pdf 等）</label>
       <div class="dropzone" onclick="document.getElementById('asset_files_input').click()">点击选择文件上传</div>
@@ -696,6 +765,47 @@
   </div>
 </div>
 
+<!-- 资产使用指引 弹窗 -->
+<div id="guideModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3>📖 使用指引 · <span id="guide_title"></span></h3>
+    <div id="guide_body" class="guide-body"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeModal('guideModal')">知道了</button>
+    </div>
+  </div>
+</div>
+
+<!-- 需求查重合并 弹窗 -->
+<div id="dedupModal" class="modal-bg hidden">
+  <div class="modal">
+    <h3>🔀 需求查重合并</h3>
+    <div class="hint" style="margin-bottom:10px">系统按公司名 / 品类 / 内容相似度找出疑似重复的需求。合并会把重复项的跟进记录、知识库关联、评论并入你选定的主需求，然后删除重复项（不可撤销）。仅管理员或两条需求都是你录入的可合并。</div>
+    <div id="dedup_body"></div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeModal('dedupModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 一键周报 弹窗 -->
+<div id="weeklyModal" class="modal-bg hidden">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <h3 style="margin:0">🧾 <span id="weekly_scope">我的</span>周报</h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" id="weekly_toggle_btn" onclick="toggleWeeklyScope()">切换团队周报</button>
+        <button class="btn-ghost" onclick="copyWeekly()">📋 复制</button>
+      </div>
+    </div>
+    <div class="hint" style="margin:8px 0">统计口径：本周一 00:00 至今。复制后可直接粘进钉钉日志 / 周报模板。</div>
+    <textarea id="weekly_text" rows="16" class="weekly-text" readonly></textarea>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="closeModal('weeklyModal')">关闭</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    全局状态
@@ -724,6 +834,9 @@ let linkData = [];          // 需求↔资产 关联记录
 let distillForReq = null;   // 正在"沉淀新资产并关联"的需求 id
 let reqView = "list";       // 需求库视图：list | kanban
 const KANBAN_COLS = ["待跟进","跟进中","已成交","已搁置"];
+const SLA_WARN_DAYS = 3;    // 在跑需求超过 N 天没跟进 → 预警（黄）
+const SLA_OVER_DAYS = 7;    // 超过 N 天没跟进 → 超时（红）
+let assetOnlyFeatured = false; // 资产库：只看精选
 
 /* ============================================================
    初始化
@@ -850,6 +963,7 @@ async function loadAll(){
   linkData = la.data || [];
   renderReq(); renderAsset();
   updateBellBadge();
+  if(!document.getElementById("tab_home").classList.contains("hidden")){ renderHome(); }
   if(!document.getElementById("tab_case").classList.contains("hidden")){ renderCases(); }
   if(currentFollowReq){ renderTimeline(); renderCommentThread("req", currentFollowReq, "fu_comment_thread"); renderReqLinks(currentFollowReq); }
   if(currentVersionAsset){ renderVersionList(); }
@@ -879,10 +993,11 @@ function subscribeRealtime(){
    Tab 切换
 ============================================================ */
 function showTab(t){
-  ["req","asset","case","admin"].forEach(function(k){
+  ["home","req","asset","case","admin"].forEach(function(k){
     document.getElementById("tab_"+k).classList.toggle("hidden", k !== t);
     document.getElementById("nav_"+k).classList.toggle("on", k === t);
   });
+  if(t === "home") renderHome();
   if(t === "case") renderCases();
   if(t === "admin") renderAdmin();
 }
@@ -987,6 +1102,29 @@ async function deleteReq(id){
   toast("已删除"); await loadAll();
 }
 
+/* ---------- 超时跟进 SLA ---------- */
+function reqLastActivity(x){
+  let t = new Date(x.created_at).getTime();
+  if(x.updated_at){ const u = new Date(x.updated_at).getTime(); if(u > t) t = u; }
+  followData.forEach(function(f){
+    if(f.req_id === x.id){ const ft = new Date(f.created_at).getTime(); if(ft > t) t = ft; }
+  });
+  return t;
+}
+function reqSla(x){
+  const st = x.status || "待跟进";
+  if(st === "已成交" || st === "已搁置") return null;   // 收口的不催
+  const days = Math.floor((Date.now() - reqLastActivity(x)) / 86400000);
+  if(days >= SLA_OVER_DAYS) return { level:"over", days:days };
+  if(days >= SLA_WARN_DAYS) return { level:"warn", days:days };
+  return null;
+}
+function slaBadge(x){
+  const s = reqSla(x);
+  if(!s) return "";
+  const txt = s.level === "over" ? "⛔ 超时 "+s.days+" 天未跟进" : "⚠️ "+s.days+" 天未跟进";
+  return "<span class='sla-badge "+s.level+"'>"+txt+"</span>";
+}
 function filteredReqs(){
   const kw = val("req_search").toLowerCase();
   const fs = val("req_filter_status");
@@ -1020,7 +1158,7 @@ function reqCardHtml(x){
   else if(x.owner_id === me.id){ claimBtn = "<button onclick='unclaimReq(\""+x.id+"\")'>取消认领</button>"; }
   else if(me.role === "admin"){ claimBtn = "<button onclick='unclaimReq(\""+x.id+"\")'>改派</button>"; }
   return "<div class='card'>"
-    + "<h3>"+esc(x.company)+" <span class='badge "+(x.status||"待跟进")+"'>"+esc(x.status||"待跟进")+"</span>"+deptBadge+"</h3>"
+    + "<h3>"+esc(x.company)+" <span class='badge "+(x.status||"待跟进")+"'>"+esc(x.status||"待跟进")+"</span>"+deptBadge+slaBadge(x)+"</h3>"
     + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
     + (x.category ? "<div class='row'><b>品类</b>"+esc(x.category)+"</div>" : "")
     + (x.region ? "<div class='row'><b>地区</b>"+esc(x.region)+"</div>" : "")
@@ -1097,6 +1235,7 @@ function renderKanban(list){
         + " onclick='openFollowups(\""+x.id+"\")'>"
         + "<div class='kb-co'>"+esc(x.company||"客户")+"</div>"
         + "<div class='kb-meta'>"+(x.category?esc(x.category)+" · ":"")+owner+"</div>"
+        + (slaBadge(x) ? "<div style='margin-top:5px'>"+slaBadge(x)+"</div>" : "")
         + (linkN ? "<div class='kb-meta'>🔗 关联 "+linkN+" 个资产</div>" : "")
         + "</div>";
     }).join("") : "<div class='kb-empty'>拖需求到这里</div>";
@@ -1232,6 +1371,7 @@ function openAssetModal(item){
   setVal("a_type", item ? item.asset_type : "skill");
   setVal("a_category", item ? item.category : "");
   setVal("a_desc", item ? item.description : "");
+  setVal("a_usage", item ? item.usage_guide : "");
   setVal("a_tags", item ? item.tags : "");
   stagedAssetFiles = [];
   document.getElementById("asset_file_list").innerHTML = item && item.attachments && item.attachments.length
@@ -1252,6 +1392,7 @@ async function saveAsset(){
   }
   const payload = {
     name:name, asset_type:val("a_type"), description:val("a_desc").trim(),
+    usage_guide:val("a_usage").trim(),
     category:val("a_category"), tags:val("a_tags").trim(), attachments:attachments, author_name:me.name,
     updated_at:new Date().toISOString()
   };
@@ -1296,6 +1437,7 @@ function renderAsset(){
     const blob = [x.name,x.description,x.tags,x.asset_type,x.category].join(" ").toLowerCase();
     if(kw && blob.indexOf(kw) === -1) return false;
     if(ft && x.asset_type !== ft) return false;
+    if(assetOnlyFeatured && !x.is_featured) return false;
     if(assetCategory === "__none__"){ if(x.category) return false; }
     else if(assetCategory && (x.category||"") !== assetCategory) return false;
     return true;
@@ -1306,6 +1448,8 @@ function renderAsset(){
     if(sort === "use")  return (b.use_count||0) - (a.use_count||0);
     return new Date(b.created_at) - new Date(a.created_at);
   });
+  // 精选置顶
+  list = list.slice().sort(function(a,b){ return (b.is_featured?1:0) - (a.is_featured?1:0); });
   const box = document.getElementById("asset_cards");
   if(!list.length){ box.innerHTML = "<div class='empty'>该分类下暂无智能体资产。点击右上角「＋ 上传智能体资产」开始。</div>"; return; }
   box.innerHTML = list.map(function(x){
@@ -1317,8 +1461,13 @@ function renderAsset(){
     const verN = versionData.filter(function(v){ return v.asset_id === x.id; }).length;
     const cmtN = commentData.filter(function(c){ return c.target_type==="asset" && c.target_id === x.id; }).length;
     const refN = assetRefCount(x.id);
-    return "<div class='card' id='asset-card-"+x.id+"'>"
-      + "<h3>"+esc(x.name)+" <span class='tag'>"+esc(x.asset_type||"skill")+"</span>"+catBadge+"</h3>"
+    const featBadge = x.is_featured ? "<span class='feat-badge'>⭐ 精选</span>" : "";
+    const guideBtn = (x.usage_guide && x.usage_guide.trim()) ? "<button class='guide' onclick='openGuide(\""+x.id+"\")'>📖 使用指引</button>" : "";
+    const featBtn = me.role === "admin"
+      ? "<button class='feat"+(x.is_featured?" on":"")+"' onclick='setFeatured(\""+x.id+"\","+(x.is_featured?"false":"true")+")'>"+(x.is_featured?"取消精选":"⭐ 设为精选")+"</button>"
+      : "";
+    return "<div class='card"+(x.is_featured?" featured":"")+"' id='asset-card-"+x.id+"'>"
+      + "<h3>"+esc(x.name)+" <span class='tag'>"+esc(x.asset_type||"skill")+"</span>"+catBadge+featBadge+"</h3>"
       + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
       + (x.description ? "<div class='row'>"+esc(x.description)+"</div>" : "")
       + (tags ? "<div style='margin-top:6px'>"+tags+"</div>" : "")
@@ -1329,9 +1478,11 @@ function renderAsset(){
       + "<span class='react-btn use'>🚀 使用 <b>"+(x.use_count||0)+"</b></span>"
       + "</div>"
       + "<div class='card-actions'>"
+      + guideBtn
       + "<button class='cmt' onclick='openAssetComments(\""+x.id+"\")'>💬 评论<span class='cmt-count'>"+cmtN+"</span></button>"
       + "<button class='ver' onclick='openVersions(\""+x.id+"\")'>🕐 版本<span class='ver-badge'>"+verN+"</span></button>"
       + "<button class='link' onclick='openAssetReqs(\""+x.id+"\")'>🔗 关联需求<span class='ref-count'>"+refN+"</span></button>"
+      + featBtn
       + (mine ? "<button onclick='editAsset(\""+x.id+"\")'>编辑</button><button class='del' onclick='deleteAsset(\""+x.id+"\")'>删除</button>" : "<span class='hint'>他人上传</span>")
       + "</div></div>";
   }).join("");
@@ -2099,6 +2250,241 @@ function gotoAsset(assetId){
       setTimeout(function(){ el.classList.remove("flash"); }, 2200);
     }
   }, 80);
+}
+
+/* ============================================================
+   资产：精选标记 + 使用指引
+============================================================ */
+function toggleAssetFeatured(){
+  assetOnlyFeatured = !assetOnlyFeatured;
+  const b = document.getElementById("asset_feat_btn");
+  b.classList.toggle("on", assetOnlyFeatured);
+  b.textContent = assetOnlyFeatured ? "⭐ 精选中" : "⭐ 只看精选";
+  renderAsset();
+}
+async function setFeatured(id, flag){
+  const { error } = await sb.from("agent_assets").update({ is_featured: flag, updated_at:new Date().toISOString() }).eq("id", id);
+  if(error){ toast("操作失败：" + error.message); return; }
+  toast(flag ? "已设为精选 ⭐" : "已取消精选");
+  await loadAll();
+}
+function openGuide(id){
+  const a = assetData.find(function(x){ return x.id === id; });
+  if(!a) return;
+  document.getElementById("guide_title").textContent = a.name || "资产";
+  document.getElementById("guide_body").innerHTML = (a.usage_guide && a.usage_guide.trim())
+    ? esc(a.usage_guide).replace(/\n/g,"<br>")
+    : "<div class='tl-empty'>还没有使用指引。</div>";
+  document.getElementById("guideModal").classList.remove("hidden");
+}
+
+/* ============================================================
+   我的工作台（个人首页）
+============================================================ */
+function renderHome(){
+  if(!me) return;
+  const hour = new Date().getHours();
+  const greet = hour < 6 ? "凌晨好" : hour < 12 ? "上午好" : hour < 14 ? "中午好" : hour < 18 ? "下午好" : "晚上好";
+  document.getElementById("home_hello").innerHTML = "👋 " + greet + "，" + esc(me.name) + "！这是你的今日工作台。";
+
+  const mineAll = reqData.filter(function(x){ return x.owner_id === me.id || (!x.owner_id && x.created_by === me.id); });
+  const myActive = mineAll.filter(function(x){ const s = x.status||"待跟进"; return s !== "已成交" && s !== "已搁置"; });
+  const myDeals  = reqData.filter(function(x){ return x.status === "已成交" && (x.owner_id === me.id || (!x.owner_id && x.created_by === me.id)); }).length;
+  const myEntered = reqData.filter(function(x){ return x.created_by === me.id; }).length;
+  const myAssets = assetData.filter(function(x){ return x.created_by === me.id; }).length;
+  const overdue  = myActive.filter(function(x){ const s = reqSla(x); return s && s.level === "over"; }).length;
+  document.getElementById("home_stats").innerHTML =
+      statCard(myActive.length, "我在跟的需求")
+    + statCard(overdue, "超时待跟进")
+    + statCard(myDeals, "我的累计成交")
+    + statCard(myEntered, "我录入的需求")
+    + statCard(myAssets, "我上传的资产");
+
+  // 待我跟进（超时 > 预警 > 其余；同级按最久没动在前）
+  function slaRank(x){ const s = reqSla(x); return s ? (s.level === "over" ? 2 : 1) : 0; }
+  const todo = myActive.slice().sort(function(a,b){
+    const d = slaRank(b) - slaRank(a);
+    if(d) return d;
+    return reqLastActivity(a) - reqLastActivity(b);
+  });
+  const todoBox = document.getElementById("home_todo");
+  if(!todo.length){
+    todoBox.innerHTML = "<div class='tl-empty'>你还没有在跟的需求。去「客户需求库」认领一条吧 🙋</div>";
+  } else {
+    todoBox.innerHTML = todo.slice(0,12).map(function(x){
+      const days = Math.floor((Date.now() - reqLastActivity(x)) / 86400000);
+      return "<div class='todo-item' onclick='openFollowups(\""+x.id+"\")'>"
+        + "<div class='todo-co'>"+esc(x.company||"客户")+" <span class='badge "+(x.status||"待跟进")+"'>"+esc(x.status||"待跟进")+"</span>"+slaBadge(x)+"</div>"
+        + "<div class='todo-meta'>"+(x.category?esc(x.category)+" · ":"")+"最近动态 "+days+" 天前</div>"
+        + "</div>";
+    }).join("");
+  }
+
+  // 与我相关的最新动态
+  const nBox = document.getElementById("home_notif");
+  const notis = (notifData||[]).slice().sort(function(a,b){ return new Date(b.created_at) - new Date(a.created_at); }).slice(0,8);
+  if(!notis.length){
+    nBox.innerHTML = "<div class='tl-empty'>暂无与你相关的动态。被 @、评论、认领或状态变更时会出现在这里。</div>";
+  } else {
+    nBox.innerHTML = notis.map(function(n){
+      return "<div class='notif-item"+(n.is_read?"":" unread")+"' onclick='openNotifTarget(\""+n.id+"\")'>"
+        + "<div class='notif-ic'>"+notifIcon(n.type)+"</div>"
+        + "<div class='notif-body'>"
+        + "<div class='notif-title'>"+esc(n.title)+(n.is_read?"":"<span class='dot'></span>")+"</div>"
+        + (n.preview ? "<div class='notif-preview'>"+esc(n.preview)+"</div>" : "")
+        + "<div class='notif-time'>"+fmtDate(n.created_at)+"</div>"
+        + "</div></div>";
+    }).join("");
+  }
+
+  // 我认领的客户需求
+  const mineBox = document.getElementById("home_mine");
+  const claimed = reqData.filter(function(x){ return x.owner_id === me.id; });
+  mineBox.innerHTML = claimed.length ? claimed.map(reqCardHtml).join("") : "<div class='empty'>你还没有认领任何需求。</div>";
+}
+
+/* ============================================================
+   需求查重合并
+============================================================ */
+var _dedupGroups = [];
+function normCompany(s){ return String(s||"").toLowerCase().replace(/[\s\(\)（）·・.,，。\-_\/]/g,""); }
+function duplicateGroups(){
+  const reqs = reqData.slice();
+  const parent = {};
+  reqs.forEach(function(r){ parent[r.id] = r.id; });
+  function find(a){ while(parent[a] !== a){ parent[a] = parent[parent[a]]; a = parent[a]; } return a; }
+  function union(a,b){ parent[find(a)] = find(b); }
+  for(var i=0;i<reqs.length;i++){
+    for(var j=i+1;j<reqs.length;j++){
+      const a = reqs[i], b = reqs[j];
+      const na = normCompany(a.company), nb = normCompany(b.company);
+      const sameCo = na && nb && na === nb;
+      if(sameCo || reqReqScore(a,b) >= 8){ union(a.id, b.id); }
+    }
+  }
+  const groups = {};
+  reqs.forEach(function(r){ const root = find(r.id); (groups[root] = groups[root] || []).push(r); });
+  return Object.keys(groups).map(function(k){ return groups[k]; }).filter(function(g){ return g.length >= 2; });
+}
+function openDedup(){ renderDedup(); document.getElementById("dedupModal").classList.remove("hidden"); }
+function renderDedup(){
+  _dedupGroups = duplicateGroups();
+  const box = document.getElementById("dedup_body");
+  if(!_dedupGroups.length){
+    box.innerHTML = "<div class='tl-empty'>没有发现疑似重复的需求，客户库很干净 👍</div>";
+    return;
+  }
+  box.innerHTML = _dedupGroups.map(function(g, gi){
+    const rows = g.map(function(r, ri){
+      const fuN = followData.filter(function(f){ return f.req_id === r.id; }).length;
+      const linkN = linkData.filter(function(l){ return l.req_id === r.id; }).length;
+      const checked = ri === 0 ? " checked" : "";
+      return "<label class='dedup-row'>"
+        + "<input type='radio' name='dedup_primary_"+gi+"' value='"+r.id+"'"+checked+" />"
+        + "<span class='dedup-co'>"+esc(r.company||"客户")+" <span class='badge "+(r.status||"待跟进")+"'>"+esc(r.status||"待跟进")+"</span></span>"
+        + "<span class='dedup-meta'>"+(r.category?esc(r.category)+" · ":"")+"录入 "+esc(r.author_name||"")+" · 跟进 "+fuN+" · 关联 "+linkN+" · "+fmtDate(r.created_at)+"</span>"
+        + "</label>";
+    }).join("");
+    return "<div class='dedup-group'>"
+      + "<div class='dedup-head'>疑似重复 · "+g.length+" 条（选一条作为「主需求」，其余并入它）</div>"
+      + rows
+      + "<div style='margin-top:8px'><button class='btn-primary' style='width:auto;padding:8px 16px' onclick='mergeGroup("+gi+")'>合并这一组</button></div>"
+      + "</div>";
+  }).join("");
+}
+async function mergeGroup(gi){
+  const group = _dedupGroups[gi];
+  if(!group){ return; }
+  const sel = document.querySelector('input[name="dedup_primary_'+gi+'"]:checked');
+  if(!sel){ toast("请先选一条主需求"); return; }
+  const into = sel.value;
+  const others = group.filter(function(r){ return r.id !== into; });
+  if(!others.length){ return; }
+  if(!confirm("确定把这 "+others.length+" 条重复需求并入主需求？跟进记录/关联/评论会迁移过去，重复项将被删除，且不可撤销。")) return;
+  for(var k=0;k<others.length;k++){
+    const { error } = await sb.rpc("merge_requirements", { p_from: others[k].id, p_into: into });
+    if(error){ toast("合并失败：" + error.message); return; }
+  }
+  toast("已合并 "+others.length+" 条到主需求");
+  await loadAll();
+  renderDedup();
+}
+
+/* ============================================================
+   一键周报
+============================================================ */
+var weeklyScope = "mine";
+function openWeekly(){
+  weeklyScope = "mine";
+  document.getElementById("weekly_toggle_btn").style.display = (me.role === "admin") ? "" : "none";
+  buildWeekly();
+  document.getElementById("weeklyModal").classList.remove("hidden");
+}
+function toggleWeeklyScope(){ weeklyScope = (weeklyScope === "mine") ? "team" : "mine"; buildWeekly(); }
+function _weekRangeLabel(ws){
+  function d(x){ return (x.getMonth()+1)+"月"+x.getDate()+"日"; }
+  return d(ws) + " ~ " + d(new Date());
+}
+function buildWeekly(){
+  const ws = weekStart();
+  const wsT = ws.getTime();
+  const isTeam = weeklyScope === "team";
+  document.getElementById("weekly_scope").textContent = isTeam ? "团队" : "我的";
+  document.getElementById("weekly_toggle_btn").textContent = isTeam ? "切换我的周报" : "切换团队周报";
+  const range = _weekRangeLabel(ws);
+  let t = "";
+  if(!isTeam){
+    const newReqs = reqData.filter(function(x){ return x.created_by === me.id && new Date(x.created_at).getTime() >= wsT; });
+    const newFollows = followData.filter(function(x){ return x.author_id === me.id && new Date(x.created_at).getTime() >= wsT; });
+    const newDeals = reqData.filter(function(x){ return x.status === "已成交" && (x.owner_id === me.id || (!x.owner_id && x.created_by === me.id)) && new Date(x.updated_at||x.created_at).getTime() >= wsT; });
+    const newAssets = assetData.filter(function(x){ return x.created_by === me.id && new Date(x.created_at).getTime() >= wsT; });
+    const mineActive = reqData.filter(function(x){ return (x.owner_id === me.id || (!x.owner_id && x.created_by === me.id)); });
+    const overdue = mineActive.filter(function(x){ const s = reqSla(x); return s && s.level === "over"; });
+    t += "【我的周报】" + esc(me.name) + "\n统计区间：" + range + "\n\n";
+    t += "一、本周成果\n";
+    t += "· 新录入客户需求：" + newReqs.length + " 条" + (newReqs.length ? "（" + newReqs.map(function(x){ return x.company||"未命名"; }).join("、") + "）" : "") + "\n";
+    t += "· 跟进记录：" + newFollows.length + " 条\n";
+    t += "· 本周成交：" + newDeals.length + " 单" + (newDeals.length ? "（" + newDeals.map(function(x){ return x.company||"客户"; }).join("、") + "）" : "") + "\n";
+    t += "· 新增/沉淀 AI 资产：" + newAssets.length + " 个" + (newAssets.length ? "（" + newAssets.map(function(x){ return x.name; }).join("、") + "）" : "") + "\n\n";
+    t += "二、待办与风险\n";
+    if(overdue.length){
+      t += "· 超时未跟进 " + overdue.length + " 条，需优先处理：\n";
+      overdue.slice(0,8).forEach(function(x){ const d = Math.floor((Date.now()-reqLastActivity(x))/86400000); t += "   - " + (x.company||"客户") + "（已 " + d + " 天未动）\n"; });
+    } else {
+      t += "· 无超时需求，跟进节奏良好。\n";
+    }
+    t += "\n三、下周计划\n· （在此补充你的下周重点）\n";
+  } else {
+    const newReqs = reqData.filter(function(x){ return new Date(x.created_at).getTime() >= wsT; });
+    const newFollows = followData.filter(function(x){ return new Date(x.created_at).getTime() >= wsT; });
+    const newDeals = reqData.filter(function(x){ return x.status === "已成交" && new Date(x.updated_at||x.created_at).getTime() >= wsT; });
+    const newAssets = assetData.filter(function(x){ return new Date(x.created_at).getTime() >= wsT; });
+    const overdue = reqData.filter(function(x){ const s = reqSla(x); return s && s.level === "over"; });
+    const top = memberStats().sort(function(a,b){ return b.score - a.score; }).slice(0,3);
+    t += "【团队周报】客户AI需求协作平台\n统计区间：" + range + "\n\n";
+    t += "一、团队本周概览\n";
+    t += "· 新增客户需求：" + newReqs.length + " 条\n";
+    t += "· 跟进记录：" + newFollows.length + " 条\n";
+    t += "· 成交：" + newDeals.length + " 单" + (newDeals.length ? "（" + newDeals.map(function(x){ return (x.owner_name||x.author_name||"")+"·"+(x.company||"客户"); }).join("、") + "）" : "") + "\n";
+    t += "· 新增 AI 资产：" + newAssets.length + " 个\n\n";
+    t += "二、本周贡献之星\n";
+    if(top.length){ top.forEach(function(r,i){ t += "· " + (i+1) + ". " + r.name + "（贡献分 " + r.score + "：需求 " + r.reqC + " / 资产 " + r.assetC + " / 跟进 " + r.followC + " / 成交 " + r.deals + "）\n"; }); }
+    else { t += "· 暂无数据\n"; }
+    t += "\n三、风险提示\n";
+    t += "· 全团队超时未跟进需求：" + overdue.length + " 条" + (overdue.length ? "，请相关同事尽快处理。" : "，跟进健康。") + "\n";
+    t += "\n四、下周重点\n· （在此补充团队下周重点）\n";
+  }
+  document.getElementById("weekly_text").value = t;
+}
+function copyWeekly(){
+  const ta = document.getElementById("weekly_text");
+  ta.select();
+  ta.setSelectionRange(0, ta.value.length);
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch(e){ ok = false; }
+  if(ok){ toast("已复制，去粘贴到钉钉日志/周报吧 📋"); return; }
+  if(navigator.clipboard){ navigator.clipboard.writeText(ta.value).then(function(){ toast("已复制 📋"); }, function(){ toast("复制失败，请手动选中复制"); }); }
+  else { toast("复制失败，请手动选中复制"); }
 }
 
 /* ============================================================
