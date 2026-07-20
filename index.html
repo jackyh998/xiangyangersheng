@@ -354,6 +354,11 @@
   .dedup-row .spacer{flex:1}
   .dedup-empty{color:var(--muted);font-size:14px;text-align:center;padding:28px 0}
   .weekly-text{width:100%;min-height:340px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;border:1px solid var(--line);border-radius:10px;padding:14px;resize:vertical;background:var(--bg);color:var(--ink)}
+
+  .mem-role-btn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600}
+  .mem-role-btn.promote{border-color:#ffd28a;background:#fff4e0;color:var(--brand)}
+  .mem-role-btn.demote{border-color:#f0c2c2;background:#fff0f0;color:var(--danger)}
+  .mem-role-btn:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -1700,10 +1705,22 @@ function renderAdmin(){
   renderAdminActivity();
   renderAssetROI();
 
-  document.getElementById("admin_members").innerHTML = tableHtml(
-    ["姓名","工号","角色","注册时间"],
-    membersData.map(function(m){ return [m.name, m.employee_no||"-", m.role==="admin"?"管理员":"成员", fmtDate(m.created_at)]; })
-  );
+  const adminCount = membersData.filter(function(m){ return m.role === "admin"; }).length;
+  const memHead = ["姓名","工号","角色","注册时间","操作"];
+  const memBody = membersData.map(function(m){
+    const isAdm = m.role === "admin";
+    let btn;
+    if(isAdm){
+      if(adminCount <= 1){ btn = "<button class='mem-role-btn demote' disabled title='至少保留一名管理员'>取消管理员</button>"; }
+      else { btn = "<button class='mem-role-btn demote' onclick='setMemberRole(\""+m.id+"\",\"member\")'>取消管理员</button>"; }
+    } else {
+      btn = "<button class='mem-role-btn promote' onclick='setMemberRole(\""+m.id+"\",\"admin\")'>设为管理员</button>";
+    }
+    const meTag = m.id === me.id ? " <span class='role-pill'>我</span>" : "";
+    return "<tr><td>"+esc(m.name)+meTag+"</td><td>"+esc(m.employee_no||"-")+"</td><td>"+(isAdm?"管理员":"成员")+"</td><td>"+fmtDate(m.created_at)+"</td><td>"+btn+"</td></tr>";
+  }).join("");
+  document.getElementById("admin_members").innerHTML =
+    "<table><thead><tr>" + memHead.map(function(h){ return "<th>"+h+"</th>"; }).join("") + "</tr></thead><tbody>" + memBody + "</tbody></table>";
   document.getElementById("admin_reqs").innerHTML = tableHtml(
     ["录入人","公司","品类","地区","分组","认领人","状态","关联资产","时间"],
     reqData.map(function(x){ return [x.author_name||"-", x.company||"-", x.category||"-", x.region||"-", x.dept||"-", x.owner_name||"-", x.status||"-", linkData.filter(function(l){ return l.req_id === x.id; }).length, fmtDate(x.created_at)]; })
@@ -1712,6 +1729,31 @@ function renderAdmin(){
     ["上传人","名称","类型","分类","使用","点赞","收藏","被引用","时间"],
     assetData.map(function(x){ return [x.author_name||"-", x.name||"-", x.asset_type||"-", x.category||"-", (x.use_count||0), countReaction(x.id,"like"), countReaction(x.id,"favorite"), assetRefCount(x.id), fmtDate(x.created_at)]; })
   );
+}
+
+/* ---------- 管理员：增删管理员权限 ---------- */
+async function setMemberRole(uid, role){
+  const m = membersData.find(function(x){ return x.id === uid; });
+  const nm = m ? m.name : "该成员";
+  const toAdmin = role === "admin";
+  if(!toAdmin){
+    const adminCount = membersData.filter(function(x){ return x.role === "admin"; }).length;
+    if(adminCount <= 1){ alert("至少保留一名管理员，不能取消最后一名。"); return; }
+    if(uid === me.id && !confirm("确定取消自己的管理员权限？取消后你将无法再进入「管理员总览」，需要其他管理员重新给你开。")){ return; }
+  }
+  const tip = toAdmin
+    ? "确定将「"+nm+"」设为管理员？TA 将能查看总览、改派需求、设精选、合并需求。"
+    : "确定取消「"+nm+"」的管理员权限？";
+  if(!confirm(tip)) return;
+  const { error } = await sb.rpc("set_member_role", { p_uid: uid, p_role: role });
+  if(error){ alert("操作失败：" + error.message); return; }
+  if(uid === me.id){
+    me.role = role;
+    document.getElementById("ub_role").textContent = me.role === "admin" ? "管理员" : "成员";
+    document.getElementById("nav_admin").classList.toggle("hidden", me.role !== "admin");
+    if(me.role !== "admin"){ showTab("home"); }
+  }
+  await loadAll();
 }
 
 /* ---------- 看板：工具与统计 ---------- */
