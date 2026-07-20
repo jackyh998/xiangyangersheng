@@ -359,6 +359,14 @@
   .mem-role-btn.promote{border-color:#ffd28a;background:#fff4e0;color:var(--brand)}
   .mem-role-btn.demote{border-color:#f0c2c2;background:#fff0f0;color:var(--danger)}
   .mem-role-btn:disabled{opacity:.5;cursor:not-allowed}
+
+  .stage-badge{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:20px;background:#eef2ff;color:#4557c7;border:1px solid #d6ddf7;margin-right:6px}
+  .biz-badge{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:20px;border:1px solid transparent}
+  .biz-badge.hi{background:#ffeceb;color:#d63b34;border-color:#f4c4c0}
+  .biz-badge.mid{background:#fff3e0;color:#c9720a;border-color:#f3d7a8}
+  .biz-badge.low{background:#eef1f4;color:#6b7683;border-color:#dbe0e6}
+  .scene-row{align-items:flex-start}
+  .scene-text{white-space:normal;line-height:1.6;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -586,9 +594,33 @@
       <div class="field"><label>归属分组</label>
         <select id="f_dept"><option value="">未分组</option><option>运营</option><option>业务</option><option>研发</option><option>生产</option></select>
       </div>
+      <div class="field"><label>业务环节 *</label>
+        <select id="f_scene_stage" onchange="renderReqEntrySuggest()">
+          <option value="">— 请选择客户卡在哪个环节 —</option>
+          <option>客户开发 / 获客</option>
+          <option>询盘接待 / 回复</option>
+          <option>报价与议价</option>
+          <option>内容营销（图文/视频/详情页）</option>
+          <option>选品 / 市场分析</option>
+          <option>多语言沟通</option>
+          <option>物流 / 售后</option>
+          <option>数据分析 / 报表</option>
+          <option>其他</option>
+        </select>
+      </div>
+      <div class="field"><label>商机价值 / 紧急度</label>
+        <select id="f_biz_value">
+          <option value="">— 可选 —</option>
+          <option>直接影响成交（高）</option>
+          <option>提升效率（中）</option>
+          <option>探索性 / 长期（低）</option>
+        </select>
+      </div>
     </div>
     <div class="field"><label>标签（逗号分隔，如 高意向,大客户,LED）</label><input id="f_tags" placeholder="如 高意向,大客户,LED" oninput="renderReqEntrySuggest()" /></div>
-    <div class="field"><label>需求描述 / 痛点</label><textarea id="f_pain" rows="3" oninput="renderReqEntrySuggest()"></textarea></div>
+    <div class="field"><label>真实业务场景（越具体，组员越好认领跟进）</label>
+      <textarea id="f_pain" rows="7" oninput="renderReqEntrySuggest()" placeholder="① 客户现状：客户现在这个环节是怎么做的？卡在哪、为什么头疼？&#10;（例：法国客户每天收 30+ 询盘，靠人工逐条翻译回复，晚上时差错过，2 天才回，客户流失）&#10;&#10;② 想让 AI 做什么：客户期望 AI 交付什么结果？&#10;（例：自动识别询盘语种→秒回一版专业报价初稿，人工只做微调）&#10;&#10;③ 客户原话 / 触发场景：客户是怎么说的？什么事让他提出这个需求？&#10;（例：客户原话「你们能不能搞个东西帮我自动回询盘，我实在忙不过来」）"></textarea>
+    </div>
     <div class="field"><label>备注</label><textarea id="f_notes" rows="2"></textarea></div>
     <div class="field"><label>附件（可多选：报价单/邮件/图片等）</label>
       <div class="dropzone" onclick="document.getElementById('req_files_input').click()">点击选择文件上传</div>
@@ -1060,6 +1092,8 @@ function openReqModal(item){
   setVal("f_budget", item ? item.budget : "");
   setVal("f_status", item ? item.status : "待跟进");
   setVal("f_dept", item ? item.dept : "");
+  setVal("f_scene_stage", item ? (item.scene_stage || "") : "");
+  setVal("f_biz_value", item ? (item.biz_value || "") : "");
   setVal("f_tags", item ? item.tags : "");
   setVal("f_pain", item ? item.pain_points : "");
   setVal("f_notes", item ? item.notes : "");
@@ -1073,6 +1107,8 @@ function openReqModal(item){
 async function saveReq(){
   const company = val("f_company").trim();
   if(!company){ toast("请填写客户公司/名称"); return; }
+  const sceneStage = val("f_scene_stage");
+  if(!sceneStage){ toast("请选择「业务环节」——组员靠它判断能不能接"); return; }
   btnBusy("reqSaveBtn", true, "保存中…");
   const id = val("req_id");
   let attachments = [];
@@ -1084,7 +1120,7 @@ async function saveReq(){
   const payload = {
     company:company, category:val("f_category").trim(), region:val("f_region").trim(),
     contact:val("f_contact").trim(), budget:val("f_budget").trim(), status:val("f_status"),
-    dept:val("f_dept"), tags:val("f_tags").trim(),
+    dept:val("f_dept"), scene_stage:sceneStage, biz_value:val("f_biz_value"), tags:val("f_tags").trim(),
     pain_points:val("f_pain").trim(), notes:val("f_notes").trim(),
     attachments:attachments, author_name:me.name, updated_at:new Date().toISOString()
   };
@@ -1138,7 +1174,7 @@ function filteredReqs(){
   const fc = val("req_filter_cat").toLowerCase();
   const ft = val("req_filter_tag").toLowerCase();
   return reqData.filter(function(x){
-    const blob = [x.company,x.category,x.region,x.pain_points,x.contact,x.notes,x.tags].join(" ").toLowerCase();
+    const blob = [x.company,x.category,x.region,x.pain_points,x.contact,x.notes,x.tags,x.scene_stage,x.biz_value].join(" ").toLowerCase();
     if(kw && blob.indexOf(kw) === -1) return false;
     if(fs && x.status !== fs) return false;
     if(fd && x.dept !== fd) return false;
@@ -1153,6 +1189,8 @@ function reqCardHtml(x){
   const mine = x.created_by === me.id || me.role === "admin";
   const tags = (x.tags||"").split(",").filter(Boolean).map(function(t){ return "<span class='tag'>"+esc(t.trim())+"</span>"; }).join("");
   const deptBadge = x.dept ? "<span class='dept-badge "+esc(x.dept)+"'>"+esc(x.dept)+"</span>" : "";
+  const stageBadge = x.scene_stage ? "<span class='stage-badge'>"+esc(x.scene_stage)+"</span>" : "";
+  const bizBadge = x.biz_value ? "<span class='biz-badge "+(x.biz_value.indexOf("高")>-1?"hi":(x.biz_value.indexOf("中")>-1?"mid":"low"))+"'>"+esc(x.biz_value)+"</span>" : "";
   const fuCount = followData.filter(function(f){ return f.req_id === x.id; }).length;
   const linkN = linkData.filter(function(l){ return l.req_id === x.id; }).length;
   let ownerRow = "";
@@ -1165,11 +1203,12 @@ function reqCardHtml(x){
   return "<div class='card'>"
     + "<h3>"+esc(x.company)+" <span class='badge "+(x.status||"待跟进")+"'>"+esc(x.status||"待跟进")+"</span>"+deptBadge+slaBadge(x)+"</h3>"
     + "<div class='meta'>"+esc(x.author_name||"")+" · "+fmtDate(x.created_at)+"</div>"
+    + ((stageBadge||bizBadge) ? "<div style='margin:4px 0 2px'>"+stageBadge+bizBadge+"</div>" : "")
     + (x.category ? "<div class='row'><b>品类</b>"+esc(x.category)+"</div>" : "")
     + (x.region ? "<div class='row'><b>地区</b>"+esc(x.region)+"</div>" : "")
     + (x.contact ? "<div class='row'><b>联系</b>"+esc(x.contact)+"</div>" : "")
     + (x.budget ? "<div class='row'><b>预算</b>"+esc(x.budget)+"</div>" : "")
-    + (x.pain_points ? "<div class='row'><b>需求</b>"+esc(x.pain_points)+"</div>" : "")
+    + (x.pain_points ? "<div class='row scene-row'><b>场景</b><span class='scene-text'>"+esc(x.pain_points).replace(/\n/g,"<br>")+"</span></div>" : "")
     + (x.notes ? "<div class='row'><b>备注</b>"+esc(x.notes)+"</div>" : "")
     + ownerRow
     + (linkN ? "<div class='row'><b>关联资产</b>🔗 "+linkN+" 个</div>" : "")
@@ -2206,9 +2245,10 @@ function renderReqEntrySuggest(){
   const pseudo = {
     id: val("req_id") || "__new__",
     company: val("f_company"), category: val("f_category"), tags: val("f_tags"),
+    scene_stage: val("f_scene_stage"),
     pain_points: val("f_pain"), notes: val("f_notes")
   };
-  const signal = (pseudo.company + pseudo.category + pseudo.tags + pseudo.pain_points).replace(/\s/g,"");
+  const signal = (pseudo.company + pseudo.category + pseudo.tags + pseudo.scene_stage + pseudo.pain_points).replace(/\s/g,"");
   if(signal.length < 2){ box.innerHTML = ""; return; }
   const sims = similarReqs(pseudo, 4);
   const recs = recommendAssetsFor(pseudo, 6);
